@@ -92,6 +92,9 @@ class GameMode {
                 for (let j = 0; j < CONFIG.visual.particleCount; j++) {
                     this.particles.push(new Particle(creature.x, creature.y));
                 }
+                if (this.particles.length > CONFIG.visual.maxParticles) {
+                    this.particles = this.particles.slice(-CONFIG.visual.maxParticles);
+                }
                 break;
             }
         }

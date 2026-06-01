@@ -37,6 +37,8 @@ class EnteringState {
 class MovingState {
     constructor() {
         this.name = 'moving';
+        this._edgeTarget = null;
+        this._crossTarget = null;
     }
 
     update(creature) {
@@ -72,9 +74,47 @@ class MovingState {
         const angle = Math.random() * Math.PI * 2;
         creature.vx = Math.cos(angle) * creature.speed;
         creature.vy = Math.sin(angle) * creature.speed;
+        this._edgeTarget = this._computeEdgeTarget(creature);
+        this._crossTarget = this._computeCrossTarget(creature);
     }
 
     exit() {}
+
+    _computeEdgeTarget(creature) {
+        const edgeMargin = 80;
+        if (creature.x < edgeMargin) {
+            return { x: edgeMargin, y: Math.random() * creature.canvasHeight };
+        } else if (creature.x > creature.canvasWidth - edgeMargin) {
+            return { x: creature.canvasWidth - edgeMargin, y: Math.random() * creature.canvasHeight };
+        } else if (creature.y < edgeMargin) {
+            return { x: Math.random() * creature.canvasWidth, y: edgeMargin };
+        } else if (creature.y > creature.canvasHeight - edgeMargin) {
+            return { x: Math.random() * creature.canvasWidth, y: creature.canvasHeight - edgeMargin };
+        } else {
+            const edges = [
+                { x: edgeMargin, y: creature.y },
+                { x: creature.canvasWidth - edgeMargin, y: creature.y },
+                { x: creature.x, y: edgeMargin },
+                { x: creature.x, y: creature.canvasHeight - edgeMargin }
+            ];
+            return edges[Math.floor(Math.random() * edges.length)];
+        }
+    }
+
+    _computeCrossTarget(creature) {
+        const edgeMargin = 100;
+        const side = Math.floor(Math.random() * 4);
+        switch(side) {
+            case 0:
+                return { x: Math.random() * creature.canvasWidth, y: edgeMargin };
+            case 1:
+                return { x: creature.canvasWidth - edgeMargin, y: Math.random() * creature.canvasHeight };
+            case 2:
+                return { x: Math.random() * creature.canvasWidth, y: creature.canvasHeight - edgeMargin };
+            default:
+                return { x: edgeMargin, y: Math.random() * creature.canvasHeight };
+        }
+    }
 
     _moveWander(creature) {
         const noiseX = Math.sin(creature.wigglePhase * 2) * 0.3;
@@ -100,66 +140,18 @@ class MovingState {
     }
 
     _moveEdgeCrawl(creature) {
-        const edgeMargin = 80;
-        let targetX, targetY;
-
-        if (creature.x < edgeMargin) {
-            targetX = edgeMargin;
-            targetY = Math.random() * creature.canvasHeight;
-        } else if (creature.x > creature.canvasWidth - edgeMargin) {
-            targetX = creature.canvasWidth - edgeMargin;
-            targetY = Math.random() * creature.canvasHeight;
-        } else if (creature.y < edgeMargin) {
-            targetX = Math.random() * creature.canvasWidth;
-            targetY = edgeMargin;
-        } else if (creature.y > creature.canvasHeight - edgeMargin) {
-            targetX = Math.random() * creature.canvasWidth;
-            targetY = creature.canvasHeight - edgeMargin;
-        } else {
-            const edges = [
-                { x: edgeMargin, y: creature.y },
-                { x: creature.canvasWidth - edgeMargin, y: creature.y },
-                { x: creature.x, y: edgeMargin },
-                { x: creature.x, y: creature.canvasHeight - edgeMargin }
-            ];
-            const target = edges[Math.floor(Math.random() * edges.length)];
-            targetX = target.x;
-            targetY = target.y;
-        }
-
-        const dx = targetX - creature.x;
-        const dy = targetY - creature.y;
+        if (!this._edgeTarget) return;
+        const dx = this._edgeTarget.x - creature.x;
+        const dy = this._edgeTarget.y - creature.y;
         const angle = Math.atan2(dy, dx);
         creature.vx = Math.cos(angle) * creature.speed * 0.8;
         creature.vy = Math.sin(angle) * creature.speed * 0.8;
     }
 
     _moveCrossScreen(creature) {
-        const edgeMargin = 100;
-        let targetX, targetY;
-
-        const side = Math.floor(Math.random() * 4);
-        switch(side) {
-            case 0:
-                targetX = Math.random() * creature.canvasWidth;
-                targetY = edgeMargin;
-                break;
-            case 1:
-                targetX = creature.canvasWidth - edgeMargin;
-                targetY = Math.random() * creature.canvasHeight;
-                break;
-            case 2:
-                targetX = Math.random() * creature.canvasWidth;
-                targetY = creature.canvasHeight - edgeMargin;
-                break;
-            case 3:
-                targetX = edgeMargin;
-                targetY = Math.random() * creature.canvasHeight;
-                break;
-        }
-
-        const dx = targetX - creature.x;
-        const dy = targetY - creature.y;
+        if (!this._crossTarget) return;
+        const dx = this._crossTarget.x - creature.x;
+        const dy = this._crossTarget.y - creature.y;
         const angle = Math.atan2(dy, dx);
 
         creature.vx = Math.cos(angle + Math.sin(creature.wigglePhase) * 0.1) * creature.speed;

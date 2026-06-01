@@ -134,4 +134,42 @@ describe('UIController', () => {
             expect(mockElements.gameOverScreen.style.display).toBe('flex');
         });
     });
+
+    describe('null safety', () => {
+        it('showScreen does not throw when element is null', () => {
+            mockElements.startScreen = null;
+            const controller = new UIController();
+            expect(() => controller.showScreen('menu')).not.toThrow();
+        });
+
+        it('updateScore does not throw when score element is null', () => {
+            mockElements.score = null;
+            const controller = new UIController();
+            expect(() => controller.updateScore(42)).not.toThrow();
+        });
+
+        it('updateTimer does not throw when time element is null', () => {
+            mockElements.time = null;
+            const controller = new UIController();
+            expect(() => controller.updateTimer(30)).not.toThrow();
+        });
+
+        it('showCombo does not throw when comboDisplay is null', () => {
+            mockElements.comboDisplay = null;
+            const controller = new UIController();
+            expect(() => controller.showCombo(3)).not.toThrow();
+        });
+
+        it('hideCombo does not throw when comboDisplay is null', () => {
+            mockElements.comboDisplay = null;
+            const controller = new UIController();
+            expect(() => controller.hideCombo()).not.toThrow();
+        });
+
+        it('showGameOver does not throw when finalScore is null', () => {
+            mockElements.finalScore = null;
+            const controller = new UIController();
+            expect(() => controller.showGameOver(100, 5)).not.toThrow();
+        });
+    });
 });

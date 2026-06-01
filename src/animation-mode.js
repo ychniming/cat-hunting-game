@@ -70,11 +70,6 @@ class AnimationMode {
         return { soundEvents, expired: false };
     }
 
-    isExpired() {
-        if (this.duration === Infinity) return false;
-        return (Date.now() - this.startTime) >= this.duration;
-    }
-
     getState() {
         return {
             creature: this.creature,
