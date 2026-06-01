@@ -6,7 +6,6 @@ class SoundManager {
         this.masterGain = null;
         this.bgMusicGain = null;
         this.sfxGain = null;
-        this.bgMusicOscillators = [];
         this.crawlNoise = null;
         this.crawlGain = null;
         this.isPlaying = false;
@@ -38,6 +37,8 @@ class SoundManager {
         if (this.isPlaying) return;
 
         this.isPlaying = true;
+        this.bgMusicGain.gain.cancelScheduledValues(this.audioCtx.currentTime);
+        this.bgMusicGain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
         const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 349.23, 329.63, 293.66];
         const durations = [2, 2, 2, 2, 3, 2, 2, 3];
 
@@ -64,8 +65,9 @@ class SoundManager {
             osc.start(this.audioCtx.currentTime);
             osc.stop(this.audioCtx.currentTime + duration);
 
+            this._bgMusicTimeout = setTimeout(playNextNote, duration * 1000);
+
             noteIndex++;
-            setTimeout(playNextNote, duration * 1000);
         };
 
         playNextNote();
@@ -73,6 +75,13 @@ class SoundManager {
 
     stopBackgroundMusic() {
         this.isPlaying = false;
+        if (this._bgMusicTimeout) {
+            clearTimeout(this._bgMusicTimeout);
+            this._bgMusicTimeout = null;
+        }
+        if (this.bgMusicGain) {
+            this.bgMusicGain.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + 0.1);
+        }
     }
 
     startCrawlSound() {
@@ -110,8 +119,16 @@ class SoundManager {
 
     stopCrawlSound() {
         if (this.crawlNoise) {
-            this.crawlNoise.stop();
+            try {
+                this.crawlNoise.stop();
+            } catch (e) {
+                // already stopped
+            }
             this.crawlNoise = null;
+        }
+        if (this.crawlGain) {
+            this.crawlGain.disconnect();
+            this.crawlGain = null;
         }
     }
 
@@ -151,11 +168,13 @@ class SoundManager {
             this.audioCtx.resume();
         }
 
+        const clampedCombo = Math.min(combo, 10);
+        const startFreq = 600 + clampedCombo * 80;
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
 
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(800 + combo * 50, this.audioCtx.currentTime);
+        osc.frequency.setValueAtTime(startFreq, this.audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(400, this.audioCtx.currentTime + CONFIG.audio.catchSoundDuration);
 
         gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);

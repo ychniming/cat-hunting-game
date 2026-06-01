@@ -3,8 +3,9 @@ import { SoundManager } from '../src/sound-manager.js';
 
 class MockGainNode {
     constructor() {
-        this.gain = { value: 0, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() };
+        this.gain = { value: 0, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(), cancelScheduledValues: vi.fn() };
         this.connect = vi.fn();
+        this.disconnect = vi.fn();
     }
 }
 

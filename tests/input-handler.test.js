@@ -44,17 +44,17 @@ describe('InputHandler', () => {
         expect(onInput).toHaveBeenCalledWith(100, 200);
     });
 
-    it('scales coords when canvas CSS size differs from internal size', () => {
+    it('does not scale coords when canvas CSS size differs from internal size', () => {
         const scaledCanvas = createMockCanvas(1600, 1200, 800, 600);
         const scaledOnInput = vi.fn();
         const scaledHandler = new InputHandler(scaledCanvas, scaledOnInput);
         const listeners = scaledCanvas.getListeners();
 
         listeners.mousedown({ clientX: 100, clientY: 200 });
-        expect(scaledOnInput).toHaveBeenCalledWith(200, 400);
+        expect(scaledOnInput).toHaveBeenCalledWith(100, 200);
     });
 
-    it('handles touch events with scaling', () => {
+    it('handles touch events without scaling', () => {
         const scaledCanvas = createMockCanvas(1600, 1200, 800, 600);
         const scaledOnInput = vi.fn();
         const scaledHandler = new InputHandler(scaledCanvas, scaledOnInput);
@@ -64,7 +64,7 @@ describe('InputHandler', () => {
             preventDefault: vi.fn(),
             touches: [{ clientX: 400, clientY: 300 }]
         });
-        expect(scaledOnInput).toHaveBeenCalledWith(800, 600);
+        expect(scaledOnInput).toHaveBeenCalledWith(400, 300);
     });
 
     it('handles multiple touches', () => {

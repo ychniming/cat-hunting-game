@@ -16,7 +16,6 @@ class GameMode {
         this.spawnTimer = 0;
         this.spawnInterval = CONFIG.game.spawnIntervalBase;
         this.gameTime = 0;
-        this.comboTimeout = null;
     }
 
     start() {
@@ -29,15 +28,10 @@ class GameMode {
         this.running = true;
         this.spawnTimer = 0;
         this.gameTime = 0;
-        this.comboTimeout = null;
     }
 
     stop() {
         this.running = false;
-        if (this.comboTimeout) {
-            clearTimeout(this.comboTimeout);
-            this.comboTimeout = null;
-        }
     }
 
     update() {
@@ -127,6 +121,10 @@ class GameMode {
     resize(canvasWidth, canvasHeight) {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
+        for (const creature of this.creatures) {
+            creature.canvasWidth = canvasWidth;
+            creature.canvasHeight = canvasHeight;
+        }
     }
 }
 

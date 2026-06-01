@@ -190,8 +190,6 @@ class PausingState {
 
     enter(creature) {
         creature.stateTimer = 0;
-        creature.vx = 0;
-        creature.vy = 0;
     }
 
     exit() {}
@@ -200,30 +198,14 @@ class PausingState {
 class ExitingState {
     constructor() {
         this.name = 'exiting';
+        this._exitTarget = null;
     }
 
     update(creature) {
-        const margin = 100;
+        if (!this._exitTarget) return null;
 
-        const dists = [
-            creature.x + margin,
-            creature.canvasWidth + margin - creature.x,
-            creature.y + margin,
-            creature.canvasHeight + margin - creature.y
-        ];
-
-        let minIdx = 0;
-        for (let i = 1; i < 4; i++) {
-            if (dists[i] < dists[minIdx]) {
-                minIdx = i;
-            }
-        }
-
-        const exitX = minIdx === 0 ? -margin : minIdx === 1 ? creature.canvasWidth + margin : creature.x;
-        const exitY = minIdx === 2 ? -margin : minIdx === 3 ? creature.canvasHeight + margin : creature.y;
-
-        const dx = exitX - creature.x;
-        const dy = exitY - creature.y;
+        const dx = this._exitTarget.x - creature.x;
+        const dy = this._exitTarget.y - creature.y;
 
         if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
             creature.vx = creature.speed * 1.5;
@@ -239,6 +221,26 @@ class ExitingState {
 
     enter(creature) {
         creature.exiting = true;
+
+        const margin = 100;
+        const candidates = [
+            { x: -margin, y: creature.y },
+            { x: creature.canvasWidth + margin, y: creature.y },
+            { x: creature.x, y: -margin },
+            { x: creature.x, y: creature.canvasHeight + margin }
+        ];
+
+        let nearest = candidates[0];
+        let nearestDist = Infinity;
+        for (const c of candidates) {
+            const d = Math.sqrt((c.x - creature.x) ** 2 + (c.y - creature.y) ** 2);
+            if (d < nearestDist) {
+                nearestDist = d;
+                nearest = c;
+            }
+        }
+
+        this._exitTarget = nearest;
     }
 
     exit() {}

@@ -108,10 +108,6 @@ class AnimationCreature {
             this.state = transition;
         }
 
-        if (this._currentState.name !== prevStateName) {
-            return this.alive;
-        }
-
         this.x += this.vx;
         this.y += this.vy;
 

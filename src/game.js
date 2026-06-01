@@ -92,7 +92,6 @@ class Game {
     }
 
     handleInput(x, y) {
-        if (this.mode === 'animation') return;
         if (this.mode !== 'game') return;
 
         const result = this.gameMode.handleInput(x, y);
@@ -119,17 +118,19 @@ class Game {
         this.ctx.fillStyle = '#f5f0e8';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        if (this.mode === 'game') {
-            this.gameMode.update();
+        if (this.mode === 'game' || this.mode === 'gameOver') {
+            if (this.mode === 'game') {
+                this.gameMode.update();
 
-            if (this.gameMode.isOver()) {
-                this.ui.showGameOver(this.gameMode.score, this.gameMode.maxCombo);
-                this.mode = 'gameOver';
-            }
+                if (this.gameMode.isOver()) {
+                    this.ui.showGameOver(this.gameMode.score, this.gameMode.maxCombo);
+                    this.mode = 'gameOver';
+                }
 
-            if (this.gameMode.time !== this._lastTime) {
-                this.ui.updateTimer(this.gameMode.time);
-                this._lastTime = this.gameMode.time;
+                if (this.gameMode.time !== this._lastTime) {
+                    this.ui.updateTimer(this.gameMode.time);
+                    this._lastTime = this.gameMode.time;
+                }
             }
 
             const state = this.gameMode.getState();

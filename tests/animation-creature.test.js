@@ -80,13 +80,11 @@ describe('AnimationCreature', () => {
             expect(creature.state).toBe('entering');
         });
 
-        it('skips position update on transition frame', () => {
-            const prevX = creature.x;
-            const prevY = creature.y;
+        it('updates position on transition frame', () => {
             creature.lifeTimer = 200;
             creature.update();
-            expect(creature.x).toBe(prevX);
-            expect(creature.y).toBe(prevY);
+            expect(creature.state).toBe('moving');
+            expect(creature.tailSegments.length).toBe(12);
         });
     });
 
