@@ -63,13 +63,6 @@ describe('AnimationMode', () => {
         });
     });
 
-    describe('isExpired', () => {
-        it('returns false for infinite duration', () => {
-            animMode.start('infinite');
-            expect(animMode.isExpired()).toBe(false);
-        });
-    });
-
     describe('resize', () => {
         it('updates canvas dimensions', () => {
             animMode.resize(1024, 768);

@@ -38,11 +38,13 @@ class Game {
 
         document.addEventListener('click', this._handleAction);
 
+        this._handleResize = () => this.resize();
         this.resize();
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('resize', this._handleResize);
 
+        this._rafId = null;
         this.loop = this.loop.bind(this);
-        requestAnimationFrame(this.loop);
+        this._rafId = requestAnimationFrame(this.loop);
     }
 
     resize() {
@@ -115,6 +117,7 @@ class Game {
     }
 
     loop() {
+        if (this._destroyed) return;
         this.ctx.fillStyle = '#f5f0e8';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -167,7 +170,25 @@ class Game {
             }
         }
 
-        requestAnimationFrame(this.loop);
+        this._rafId = requestAnimationFrame(this.loop);
+    }
+
+    destroy() {
+        this._destroyed = true;
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
+        window.removeEventListener('resize', this._handleResize);
+        document.removeEventListener('click', this._handleAction);
+        this.inputHandler.destroy();
+        if (this._comboTimeout) {
+            clearTimeout(this._comboTimeout);
+            this._comboTimeout = null;
+        }
+        this.soundManager.destroy();
+        this.gameMode.stop();
+        this.animationMode.stop();
     }
 }
 

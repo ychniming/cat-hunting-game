@@ -14,8 +14,10 @@ class MockOscillator {
         this.type = 'sine';
         this.frequency = { value: 440, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() };
         this.connect = vi.fn();
+        this.disconnect = vi.fn();
         this.start = vi.fn();
         this.stop = vi.fn();
+        this.onended = null;
     }
 }
 
@@ -44,9 +46,11 @@ function createMockAudioContext() {
         createBiquadFilter: vi.fn(() => ({
             type: 'lowpass',
             frequency: { value: 800 },
-            connect: vi.fn()
+            connect: vi.fn(),
+            disconnect: vi.fn()
         })),
-        resume: vi.fn()
+        resume: vi.fn(),
+        close: vi.fn(() => Promise.resolve())
     };
 }
 
@@ -154,6 +158,14 @@ describe('SoundManager', () => {
             expect(noise.stop).toHaveBeenCalled();
             expect(manager.crawlNoise).toBeNull();
         });
+
+        it('disconnects crawl filter', () => {
+            manager.startCrawlSound();
+            const filter = manager.crawlFilter;
+            manager.stopCrawlSound();
+            expect(filter.disconnect).toHaveBeenCalled();
+            expect(manager.crawlFilter).toBeNull();
+        });
     });
 
     describe('playPauseSound', () => {
@@ -192,6 +204,131 @@ describe('SoundManager', () => {
             manager.stopAll();
             expect(manager.isPlaying).toBe(false);
             expect(manager.crawlNoise).toBeNull();
+        });
+    });
+
+    describe('destroy', () => {
+        it('disconnects all gain nodes', () => {
+            manager.init();
+            const master = manager.masterGain;
+            const bg = manager.bgMusicGain;
+            const sfx = manager.sfxGain;
+            manager.destroy();
+            expect(master.disconnect).toHaveBeenCalled();
+            expect(bg.disconnect).toHaveBeenCalled();
+            expect(sfx.disconnect).toHaveBeenCalled();
+        });
+
+        it('closes AudioContext', () => {
+            manager.init();
+            manager.destroy();
+            expect(mockCtx.close).toHaveBeenCalled();
+        });
+
+        it('sets audioCtx to null', () => {
+            manager.init();
+            manager.destroy();
+            expect(manager.audioCtx).toBeNull();
+        });
+
+        it('sets all gain nodes to null', () => {
+            manager.init();
+            manager.destroy();
+            expect(manager.masterGain).toBeNull();
+            expect(manager.bgMusicGain).toBeNull();
+            expect(manager.sfxGain).toBeNull();
+        });
+    });
+
+    describe('init error handling', () => {
+        it('sets audioCtx to null on creation failure', () => {
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            manager.init();
+            expect(manager.audioCtx).toBeNull();
+        });
+
+        it('clears all gain nodes on creation failure', () => {
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            manager.init();
+            expect(manager.masterGain).toBeNull();
+            expect(manager.bgMusicGain).toBeNull();
+            expect(manager.sfxGain).toBeNull();
+        });
+    });
+
+    describe('null guard after init failure', () => {
+        it('startBackgroundMusic returns early when audioCtx is null', () => {
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            expect(() => manager.startBackgroundMusic()).not.toThrow();
+        });
+
+        it('startCrawlSound returns early when audioCtx is null', () => {
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            expect(() => manager.startCrawlSound()).not.toThrow();
+        });
+
+        it('playPauseSound returns early when audioCtx is null', () => {
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            expect(() => manager.playPauseSound()).not.toThrow();
+        });
+
+        it('playCatchSound returns early when audioCtx is null', () => {
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            expect(() => manager.playCatchSound(3)).not.toThrow();
+        });
+    });
+
+    describe('oscillator onended cleanup', () => {
+        it('sets onended handler on background music oscillator', () => {
+            manager.startBackgroundMusic();
+            const osc = mockCtx.createOscillator.mock.results[0].value;
+            expect(osc.onended).toBeInstanceOf(Function);
+        });
+
+        it('onended disconnects both osc and gain for background music', () => {
+            manager.startBackgroundMusic();
+            const osc = mockCtx.createOscillator.mock.results[0].value;
+            const noteGainIdx = mockCtx.createGain.mock.results.length - 1;
+            const gain = mockCtx.createGain.mock.results[noteGainIdx].value;
+            osc.onended();
+            expect(osc.disconnect).toHaveBeenCalled();
+            expect(gain.disconnect).toHaveBeenCalled();
+        });
+
+        it('onended disconnects both osc and gain for pause sound', () => {
+            manager.init();
+            manager.playPauseSound();
+            const lastOscIdx = mockCtx.createOscillator.mock.results.length - 1;
+            const osc = mockCtx.createOscillator.mock.results[lastOscIdx].value;
+            const lastGainIdx = mockCtx.createGain.mock.results.length - 1;
+            const gain = mockCtx.createGain.mock.results[lastGainIdx].value;
+            osc.onended();
+            expect(osc.disconnect).toHaveBeenCalled();
+            expect(gain.disconnect).toHaveBeenCalled();
+        });
+
+        it('onended disconnects both osc and gain for catch sound', () => {
+            manager.init();
+            manager.playCatchSound(3);
+            const lastOscIdx = mockCtx.createOscillator.mock.results.length - 1;
+            const osc = mockCtx.createOscillator.mock.results[lastOscIdx].value;
+            const lastGainIdx = mockCtx.createGain.mock.results.length - 1;
+            const gain = mockCtx.createGain.mock.results[lastGainIdx].value;
+            osc.onended();
+            expect(osc.disconnect).toHaveBeenCalled();
+            expect(gain.disconnect).toHaveBeenCalled();
         });
     });
 });

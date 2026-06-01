@@ -8,12 +8,14 @@ class SoundManager {
         this.sfxGain = null;
         this.crawlNoise = null;
         this.crawlGain = null;
+        this.crawlFilter = null;
         this.isPlaying = false;
         this.volume = 0.5;
     }
 
     init() {
-        if (!this.audioCtx) {
+        if (this.audioCtx) return;
+        try {
             this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.audioCtx.createGain();
             this.masterGain.gain.value = this.volume;
@@ -26,11 +28,18 @@ class SoundManager {
             this.sfxGain = this.audioCtx.createGain();
             this.sfxGain.gain.value = 0.3;
             this.sfxGain.connect(this.masterGain);
+        } catch (e) {
+            console.warn('SoundManager: AudioContext creation failed, audio disabled.', e.message);
+            this.audioCtx = null;
+            this.masterGain = null;
+            this.bgMusicGain = null;
+            this.sfxGain = null;
         }
     }
 
     startBackgroundMusic() {
         if (!this.audioCtx) this.init();
+        if (!this.audioCtx) return;
         if (this.audioCtx.state === 'suspended') {
             this.audioCtx.resume();
         }
@@ -65,6 +74,11 @@ class SoundManager {
             osc.start(this.audioCtx.currentTime);
             osc.stop(this.audioCtx.currentTime + duration);
 
+            osc.onended = () => {
+                osc.disconnect();
+                gain.disconnect();
+            };
+
             this._bgMusicTimeout = setTimeout(playNextNote, duration * 1000);
 
             noteIndex++;
@@ -79,13 +93,14 @@ class SoundManager {
             clearTimeout(this._bgMusicTimeout);
             this._bgMusicTimeout = null;
         }
-        if (this.bgMusicGain) {
+        if (this.bgMusicGain && this.audioCtx) {
             this.bgMusicGain.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + 0.1);
         }
     }
 
     startCrawlSound() {
         if (!this.audioCtx) this.init();
+        if (!this.audioCtx) return;
         if (this.audioCtx.state === 'suspended') {
             this.audioCtx.resume();
         }
@@ -106,12 +121,12 @@ class SoundManager {
         this.crawlGain = this.audioCtx.createGain();
         this.crawlGain.gain.value = 0.05;
 
-        const filter = this.audioCtx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 800;
+        this.crawlFilter = this.audioCtx.createBiquadFilter();
+        this.crawlFilter.type = 'lowpass';
+        this.crawlFilter.frequency.value = 800;
 
-        this.crawlNoise.connect(filter);
-        filter.connect(this.crawlGain);
+        this.crawlNoise.connect(this.crawlFilter);
+        this.crawlFilter.connect(this.crawlGain);
         this.crawlGain.connect(this.sfxGain);
 
         this.crawlNoise.start();
@@ -126,6 +141,10 @@ class SoundManager {
             }
             this.crawlNoise = null;
         }
+        if (this.crawlFilter) {
+            this.crawlFilter.disconnect();
+            this.crawlFilter = null;
+        }
         if (this.crawlGain) {
             this.crawlGain.disconnect();
             this.crawlGain = null;
@@ -134,6 +153,7 @@ class SoundManager {
 
     playPauseSound() {
         if (!this.audioCtx) this.init();
+        if (!this.audioCtx) return;
         if (this.audioCtx.state === 'suspended') {
             this.audioCtx.resume();
         }
@@ -153,6 +173,11 @@ class SoundManager {
 
         osc.start(this.audioCtx.currentTime);
         osc.stop(this.audioCtx.currentTime + 0.5);
+
+        osc.onended = () => {
+            osc.disconnect();
+            gain.disconnect();
+        };
     }
 
     setVolume(vol) {
@@ -164,6 +189,7 @@ class SoundManager {
 
     playCatchSound(combo) {
         if (!this.audioCtx) this.init();
+        if (!this.audioCtx) return;
         if (this.audioCtx.state === 'suspended') {
             this.audioCtx.resume();
         }
@@ -185,11 +211,41 @@ class SoundManager {
 
         osc.start(this.audioCtx.currentTime);
         osc.stop(this.audioCtx.currentTime + CONFIG.audio.catchSoundDuration);
+
+        osc.onended = () => {
+            osc.disconnect();
+            gain.disconnect();
+        };
     }
 
     stopAll() {
         this.stopBackgroundMusic();
         this.stopCrawlSound();
+    }
+
+    destroy() {
+        this.stopAll();
+        if (this.crawlFilter) {
+            this.crawlFilter.disconnect();
+            this.crawlFilter = null;
+        }
+        if (this.masterGain) {
+            this.masterGain.disconnect();
+            this.masterGain = null;
+        }
+        if (this.bgMusicGain) {
+            this.bgMusicGain.disconnect();
+            this.bgMusicGain = null;
+        }
+        if (this.sfxGain) {
+            this.sfxGain.disconnect();
+            this.sfxGain = null;
+        }
+        if (this.audioCtx) {
+            const ctx = this.audioCtx;
+            this.audioCtx = null;
+            ctx.close().catch(() => {});
+        }
     }
 }
 

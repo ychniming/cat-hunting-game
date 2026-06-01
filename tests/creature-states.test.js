@@ -111,6 +111,40 @@ describe('CreatureStates', () => {
             state.enter(creature);
             expect(creature.patternTimer).toBe(0);
         });
+
+        it('caches edge target on enter', () => {
+            state.enter(creature);
+            expect(state._edgeTarget).not.toBeNull();
+            expect(state._edgeTarget).toHaveProperty('x');
+            expect(state._edgeTarget).toHaveProperty('y');
+        });
+
+        it('caches cross target on enter', () => {
+            state.enter(creature);
+            expect(state._crossTarget).not.toBeNull();
+            expect(state._crossTarget).toHaveProperty('x');
+            expect(state._crossTarget).toHaveProperty('y');
+        });
+
+        it('edge crawl uses cached target consistently', () => {
+            creature.movePattern = 1;
+            state.enter(creature);
+            const targetX = state._edgeTarget.x;
+            const targetY = state._edgeTarget.y;
+            state.update(creature);
+            expect(state._edgeTarget.x).toBe(targetX);
+            expect(state._edgeTarget.y).toBe(targetY);
+        });
+
+        it('cross screen uses cached target consistently', () => {
+            creature.movePattern = 2;
+            state.enter(creature);
+            const targetX = state._crossTarget.x;
+            const targetY = state._crossTarget.y;
+            state.update(creature);
+            expect(state._crossTarget.x).toBe(targetX);
+            expect(state._crossTarget.y).toBe(targetY);
+        });
     });
 
     describe('PausingState', () => {

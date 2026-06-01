@@ -17,7 +17,8 @@ const CONFIG = Object.freeze({
     fps: 60,
     particleCount: 8,
     particleGravity: 0.1,
-    comboDisplayDuration: 1000
+    comboDisplayDuration: 1000,
+    maxParticles: 200
   }),
   audio: Object.freeze({
     catchSoundDuration: 0.1

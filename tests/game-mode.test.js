@@ -110,4 +110,20 @@ describe('GameMode', () => {
             expect(state).toHaveProperty('particles');
         });
     });
+
+    describe('particle limit', () => {
+        it('trims particles when exceeding maxParticles', () => {
+            gameMode.start();
+            for (let i = 0; i < 30; i++) {
+                gameMode.creatures.push({
+                    x: 400, y: 300, radius: 20, alive: true, caught: false,
+                    checkClick: (cx, cy) => true
+                });
+            }
+            for (let i = 0; i < 30; i++) {
+                gameMode.handleInput(400, 300);
+            }
+            expect(gameMode.particles.length).toBeLessThanOrEqual(200);
+        });
+    });
 });

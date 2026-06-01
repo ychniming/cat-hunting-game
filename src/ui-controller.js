@@ -14,56 +14,75 @@ class UIController {
         };
     }
 
+    _safeSetDisplay(key, value) {
+        const el = this.elements[key];
+        if (el) el.style.display = value;
+    }
+
+    _safeSetText(key, value) {
+        const el = this.elements[key];
+        if (el) el.textContent = value;
+    }
+
+    _safeAddClass(key, cls) {
+        const el = this.elements[key];
+        if (el) el.classList.add(cls);
+    }
+
+    _safeRemoveClass(key, cls) {
+        const el = this.elements[key];
+        if (el) el.classList.remove(cls);
+    }
+
     showScreen(name) {
-        this.elements.startScreen.style.display = 'none';
-        this.elements.gameOverScreen.style.display = 'none';
-        this.elements.animationScreen.style.display = 'none';
-        this.elements.ui.style.display = 'none';
-        this.elements.modeSwitch.style.display = 'none';
+        this._safeSetDisplay('startScreen', 'none');
+        this._safeSetDisplay('gameOverScreen', 'none');
+        this._safeSetDisplay('animationScreen', 'none');
+        this._safeSetDisplay('ui', 'none');
+        this._safeSetDisplay('modeSwitch', 'none');
 
         switch(name) {
             case 'menu':
-                this.elements.startScreen.style.display = 'flex';
+                this._safeSetDisplay('startScreen', 'flex');
                 break;
             case 'game':
-                this.elements.ui.style.display = 'flex';
-                this.elements.modeSwitch.style.display = 'block';
+                this._safeSetDisplay('ui', 'flex');
+                this._safeSetDisplay('modeSwitch', 'block');
                 break;
             case 'animation':
-                this.elements.modeSwitch.style.display = 'block';
+                this._safeSetDisplay('modeSwitch', 'block');
                 break;
             case 'animationSettings':
-                this.elements.animationScreen.style.display = 'flex';
+                this._safeSetDisplay('animationScreen', 'flex');
                 break;
             case 'gameOver':
-                this.elements.gameOverScreen.style.display = 'flex';
+                this._safeSetDisplay('gameOverScreen', 'flex');
                 break;
         }
     }
 
     updateScore(score) {
-        this.elements.score.textContent = score;
+        this._safeSetText('score', score);
     }
 
     updateTimer(time) {
-        this.elements.time.textContent = time;
+        this._safeSetText('time', time);
     }
 
     showCombo(combo) {
-        const display = this.elements.comboDisplay;
         if (combo >= 2) {
-            display.textContent = `${combo} 连击!`;
-            display.classList.add('show');
+            this._safeSetText('comboDisplay', `${combo} 连击!`);
+            this._safeAddClass('comboDisplay', 'show');
         }
     }
 
     hideCombo() {
-        this.elements.comboDisplay.classList.remove('show');
+        this._safeRemoveClass('comboDisplay', 'show');
     }
 
     showGameOver(score, maxCombo) {
-        this.elements.finalScore.textContent = score;
-        this.elements.maxCombo.textContent = maxCombo;
+        this._safeSetText('finalScore', score);
+        this._safeSetText('maxCombo', maxCombo);
         this.showScreen('gameOver');
     }
 }
