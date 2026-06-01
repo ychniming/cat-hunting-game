@@ -1,0 +1,14 @@
+{
+  "name": "cat-hunting-game",
+  "version": "1.0.0",
+  "description": "给猫咪玩的互动捕猎游戏",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8080",
+    "build:android": "cordova build android",
+    "build:android-release": "cordova build android --release"
+  },
+  "keywords": ["cat", "game", "pet", "interactive"],
+  "author": "",
+  "license": "MIT"
+}
