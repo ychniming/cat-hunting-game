@@ -57,20 +57,31 @@
 ```
 猫咪动画改造游戏/
 ├── index.html          # 主页面，包含所有UI层
-├── game.js             # 游戏核心逻辑
+├── src/                # ES模块源码
+│   ├── main.js         # 入口，实例化Game
+│   ├── game.js         # 游戏主循环与模式切换
+│   ├── config.js       # 配置常量
+│   ├── game-mode.js    # 游戏模式逻辑
+│   ├── animation-mode.js # 动画模式逻辑
+│   ├── creature.js     # 游戏模式生物
+│   ├── animation-creature.js # 动画模式生物（含状态机）
+│   ├── creature-states.js # 动画生物状态机定义
+│   ├── creature-renderer.js # 生物渲染函数
+│   ├── particle.js     # 粒子效果
+│   ├── sound-manager.js # 音频管理
+│   ├── input-handler.js # 输入处理
+│   └── ui-controller.js # UI控制
+├── tests/              # 测试文件
 ├── manifest.json       # PWA配置
 ├── sw.js               # Service Worker
 ├── package.json        # 项目元数据
 ├── cordova-setup.ps1   # Android打包脚本
 ├── extract_frames.py   # 视频帧提取工具
 ├── assets/             # 素材目录
-│   ├── frames/         # 视频关键帧
-│   ├── sprites/        # 精灵图（预留）
-│   ├── backgrounds/    # 背景图（预留）
-│   └── sounds/         # 音效文件（预留）
+│   └── frames/         # 视频关键帧
 ├── docs/               # 文档目录
 │   ├── adr/            # 架构决策记录
-│   └── ...             # 其他文档
+│   └── issues/         # 问题追踪
 └── CONTEXT.md          # 本文件
 ```
 

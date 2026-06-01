@@ -5,10 +5,22 @@
   "main": "index.html",
   "scripts": {
     "start": "python -m http.server 8080",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "build:android": "cordova build android",
     "build:android-release": "cordova build android --release"
   },
-  "keywords": ["cat", "game", "pet", "interactive"],
+  "keywords": [
+    "cat",
+    "game",
+    "pet",
+    "interactive"
+  ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.8",
+    "vitest": "^4.1.8"
+  }
 }
