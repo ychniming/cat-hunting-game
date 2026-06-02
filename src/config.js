@@ -7,11 +7,21 @@ const CONFIG = Object.freeze({
     spawnAccelerationStep: 5,
     doubleSpawnChance: 0.3,
     doubleSpawnThreshold: 600,
-    tailSegments: 8
+    tailSegments: 16
   }),
   animation: Object.freeze({
     spawnDelay: 60,
-    tailSegments: 12
+    tailSegments: 20
+  }),
+  tail: Object.freeze({
+    gravity: 0.15,
+    stiffness: 0.8,
+    damping: 0.98,
+    constraintIterations: 3,
+    segmentLength: 8,
+    baseWidthRatio: 0.6,
+    tipWidth: 1,
+    curlRadius: 4
   }),
   visual: Object.freeze({
     fps: 60,

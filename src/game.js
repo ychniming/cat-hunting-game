@@ -9,6 +9,7 @@ import { renderCreature } from './creature-renderer.js';
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
+        this.canvas._gameInstance = this;
         this.ctx = this.canvas.getContext('2d');
         this.mode = 'menu';
 
@@ -71,7 +72,7 @@ class Game {
     }
 
     restart() {
-        if (this.mode === 'game') {
+        if (this.mode === 'game' || this.mode === 'gameOver') {
             this.startGameMode();
         }
     }
@@ -192,4 +193,5 @@ class Game {
     }
 }
 
+export { Game };
 new Game();

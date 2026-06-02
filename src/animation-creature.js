@@ -1,5 +1,6 @@
 import { STATE_MAP, STATE_TRANSITIONS } from './creature-states.js';
 import { CONFIG } from './config.js';
+import { TailChain } from './tail-chain.js';
 
 class AnimationCreature {
     constructor(canvasWidth, canvasHeight) {
@@ -48,15 +49,15 @@ class AnimationCreature {
 
         this.wigglePhase = Math.random() * Math.PI * 2;
         this.wiggleSpeed = 0.08 + Math.random() * 0.06;
-        this.tailSegments = [];
-        const tailAngle = Math.atan2(this.targetY - this.y, this.targetX - this.x) + Math.PI;
-        const tailStep = this.radius * 0.8;
-        for (let i = 0; i < CONFIG.animation.tailSegments; i++) {
-            this.tailSegments.push({
-                x: this.x + Math.cos(tailAngle) * tailStep * i,
-                y: this.y + Math.sin(tailAngle) * tailStep * i
-            });
-        }
+
+        const segCount = CONFIG.animation.tailSegments;
+        const segLen = CONFIG.tail.segmentLength;
+        this.tailChain = new TailChain(this.x, this.y, segCount, segLen, {
+            gravity: CONFIG.tail.gravity,
+            stiffness: CONFIG.tail.stiffness,
+            damping: CONFIG.tail.damping,
+            constraintIterations: CONFIG.tail.constraintIterations
+        });
 
         this.eyeOffset = 0;
         this.blinkTimer = Math.random() * 200;
@@ -111,10 +112,7 @@ class AnimationCreature {
         this.x += this.vx;
         this.y += this.vy;
 
-        this.tailSegments.unshift({ x: this.x, y: this.y });
-        if (this.tailSegments.length > CONFIG.animation.tailSegments) {
-            this.tailSegments.pop();
-        }
+        this._updateTailPhysics();
 
         const margin = 100;
         if (this.exiting &&
@@ -126,15 +124,30 @@ class AnimationCreature {
         return this.alive;
     }
 
+    _updateTailPhysics() {
+        if (this.state === 'pausing') {
+            this.tailChain.setGravity(CONFIG.tail.gravity * 2);
+            this.tailChain.setStiffness(CONFIG.tail.stiffness * 0.5);
+        } else if (this.state === 'exiting') {
+            this.tailChain.setGravity(CONFIG.tail.gravity * 0.5);
+            this.tailChain.setStiffness(CONFIG.tail.stiffness * 1.2);
+        } else {
+            this.tailChain.setGravity(CONFIG.tail.gravity);
+            this.tailChain.setStiffness(CONFIG.tail.stiffness);
+        }
+        this.tailChain.update(this.x, this.y);
+    }
+
+    get tailSegments() {
+        return this.tailChain.getSegments();
+    }
+
     getVisualProps() {
         return {
             x: this.x,
             y: this.y,
             radius: this.radius,
             tailSegments: this.tailSegments,
-            wigglePhase: this.wigglePhase,
-            vx: this.vx,
-            vy: this.vy,
             blinking: this.blinking,
             eyeOffset: this.eyeOffset,
             eyeSizeRatio: 0.3,
@@ -142,9 +155,7 @@ class AnimationCreature {
             pupilSizeRatio: 0.45,
             eyeVerticalOffset: -this.radius * 0.1,
             caught: false,
-            caughtTime: 0,
-            tailWiggleScale: this.radius * 2,
-            tailWiggleFreq: 0.6
+            caughtTime: 0
         };
     }
 

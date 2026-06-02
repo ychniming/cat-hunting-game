@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { TailChain } from './tail-chain.js';
 
 class Creature {
     constructor(canvasWidth, canvasHeight) {
@@ -36,8 +37,6 @@ class Creature {
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.radius = 15 + Math.random() * 10;
-        this.tailLength = 40 + Math.random() * 30;
-        this.tailSegments = [];
         this.alive = true;
         this.caught = false;
         this.caughtTime = 0;
@@ -47,15 +46,21 @@ class Creature {
         this.blinkTimer = Math.random() * 200;
         this.blinking = false;
 
-        for (let i = 0; i < CONFIG.game.tailSegments; i++) {
-            this.tailSegments.push({ x: this.x, y: this.y });
-        }
+        const segCount = CONFIG.game.tailSegments;
+        const segLen = CONFIG.tail.segmentLength;
+        this.tailChain = new TailChain(this.x, this.y, segCount, segLen, {
+            gravity: CONFIG.tail.gravity,
+            stiffness: CONFIG.tail.stiffness,
+            damping: CONFIG.tail.damping,
+            constraintIterations: CONFIG.tail.constraintIterations
+        });
     }
 
     update() {
         if (this.caught) {
             this.caughtTime++;
             this.radius *= 0.9;
+            this.tailChain.update(this.x, this.y);
             return this.caughtTime < 20;
         }
 
@@ -84,10 +89,7 @@ class Creature {
             this.vy = (this.vy / speed) * maxSpeed;
         }
 
-        this.tailSegments.unshift({ x: this.x, y: this.y });
-        if (this.tailSegments.length > CONFIG.game.tailSegments) {
-            this.tailSegments.pop();
-        }
+        this.tailChain.update(this.x, this.y);
 
         const margin = 100;
         if (this.x < -margin || this.x > this.canvasWidth + margin ||
@@ -98,15 +100,16 @@ class Creature {
         return true;
     }
 
+    get tailSegments() {
+        return this.tailChain.getSegments();
+    }
+
     getVisualProps() {
         return {
             x: this.x,
             y: this.y,
             radius: this.radius,
             tailSegments: this.tailSegments,
-            wigglePhase: this.wigglePhase,
-            vx: this.vx,
-            vy: this.vy,
             blinking: this.blinking,
             eyeOffset: this.eyeOffset,
             eyeSizeRatio: 0.35,
@@ -114,9 +117,7 @@ class Creature {
             pupilSizeRatio: 0.5,
             eyeVerticalOffset: -2,
             caught: this.caught,
-            caughtTime: this.caughtTime,
-            tailWiggleScale: 8,
-            tailWiggleFreq: 0.8
+            caughtTime: this.caughtTime
         };
     }
 

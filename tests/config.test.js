@@ -50,7 +50,7 @@ describe('CONFIG', () => {
     });
 
     it('has tailSegments', () => {
-      expect(CONFIG.game.tailSegments).toBe(8);
+      expect(CONFIG.game.tailSegments).toBe(16);
     });
   });
 
@@ -60,7 +60,41 @@ describe('CONFIG', () => {
     });
 
     it('has tailSegments', () => {
-      expect(CONFIG.animation.tailSegments).toBe(12);
+      expect(CONFIG.animation.tailSegments).toBe(20);
+    });
+  });
+
+  describe('tail group', () => {
+    it('has gravity', () => {
+      expect(CONFIG.tail.gravity).toBe(0.15);
+    });
+
+    it('has stiffness', () => {
+      expect(CONFIG.tail.stiffness).toBe(0.8);
+    });
+
+    it('has damping', () => {
+      expect(CONFIG.tail.damping).toBe(0.98);
+    });
+
+    it('has constraintIterations', () => {
+      expect(CONFIG.tail.constraintIterations).toBe(3);
+    });
+
+    it('has segmentLength', () => {
+      expect(CONFIG.tail.segmentLength).toBe(8);
+    });
+
+    it('has baseWidthRatio', () => {
+      expect(CONFIG.tail.baseWidthRatio).toBe(0.6);
+    });
+
+    it('has tipWidth', () => {
+      expect(CONFIG.tail.tipWidth).toBe(1);
+    });
+
+    it('has curlRadius', () => {
+      expect(CONFIG.tail.curlRadius).toBe(4);
     });
   });
 

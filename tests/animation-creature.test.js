@@ -33,8 +33,8 @@ describe('AnimationCreature', () => {
             expect(creature.radius).toBeGreaterThan(0);
         });
 
-        it('has 12 tail segments', () => {
-            expect(creature.tailSegments.length).toBe(12);
+        it('has 20 tail segments', () => {
+            expect(creature.tailSegments.length).toBe(20);
         });
 
         it('speed is positive', () => {
@@ -84,7 +84,7 @@ describe('AnimationCreature', () => {
             creature.lifeTimer = 200;
             creature.update();
             expect(creature.state).toBe('moving');
-            expect(creature.tailSegments.length).toBe(12);
+            expect(creature.tailSegments.length).toBe(20);
         });
     });
 
@@ -132,6 +132,38 @@ describe('AnimationCreature', () => {
         it('caught is always false for animation creature', () => {
             const props = creature.getVisualProps();
             expect(props.caught).toBe(false);
+        });
+
+        it('tailSegments is an array of {x, y} objects', () => {
+            const props = creature.getVisualProps();
+            expect(Array.isArray(props.tailSegments)).toBe(true);
+            props.tailSegments.forEach(s => {
+                expect(s).toHaveProperty('x');
+                expect(s).toHaveProperty('y');
+            });
+        });
+    });
+
+    describe('tail physics', () => {
+        it('adjusts gravity when pausing', () => {
+            transitionTo(creature, 'pausing');
+            creature.update();
+            expect(creature.tailChain.gravity).toBeGreaterThan(0.15);
+        });
+
+        it('adjusts stiffness when pausing', () => {
+            transitionTo(creature, 'pausing');
+            creature.update();
+            expect(creature.tailChain.stiffness).toBeLessThan(0.8);
+        });
+
+        it('restores default physics when moving', () => {
+            transitionTo(creature, 'pausing');
+            creature.update();
+            transitionTo(creature, 'moving');
+            creature.update();
+            expect(creature.tailChain.gravity).toBeCloseTo(0.15);
+            expect(creature.tailChain.stiffness).toBeCloseTo(0.8);
         });
     });
 });

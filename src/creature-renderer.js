@@ -1,13 +1,53 @@
+import { CONFIG } from './config.js';
+
+function renderTaperedTail(ctx, segments, baseWidth, tipWidth) {
+    if (segments.length < 2) return;
+
+    const n = segments.length;
+
+    for (let i = 0; i < n - 1; i++) {
+        const t = i / (n - 1);
+        const width = baseWidth + (tipWidth - baseWidth) * t;
+
+        ctx.beginPath();
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+
+        if (i === 0) {
+            ctx.moveTo(segments[0].x, segments[0].y);
+            if (n > 2) {
+                const mx = (segments[0].x + segments[1].x) / 2;
+                const my = (segments[0].y + segments[1].y) / 2;
+                ctx.lineTo(mx, my);
+            } else {
+                ctx.lineTo(segments[1].x, segments[1].y);
+            }
+        } else if (i === n - 2) {
+            const prevMx = (segments[i - 1].x + segments[i].x) / 2;
+            const prevMy = (segments[i - 1].y + segments[i].y) / 2;
+            ctx.moveTo(prevMx, prevMy);
+            ctx.quadraticCurveTo(segments[i].x, segments[i].y, segments[i + 1].x, segments[i + 1].y);
+        } else {
+            const prevMx = (segments[i - 1].x + segments[i].x) / 2;
+            const prevMy = (segments[i - 1].y + segments[i].y) / 2;
+            const nextMx = (segments[i].x + segments[i + 1].x) / 2;
+            const nextMy = (segments[i].y + segments[i + 1].y) / 2;
+            ctx.moveTo(prevMx, prevMy);
+            ctx.quadraticCurveTo(segments[i].x, segments[i].y, nextMx, nextMy);
+        }
+
+        ctx.stroke();
+    }
+}
+
 function renderCreature(ctx, props) {
     const {
         x, y, radius,
-        tailSegments, wigglePhase,
-        vx, vy,
+        tailSegments,
         blinking, eyeOffset,
         eyeSizeRatio, eyeSpacingRatio, pupilSizeRatio,
         eyeVerticalOffset,
-        caught, caughtTime,
-        tailWiggleScale, tailWiggleFreq
+        caught, caughtTime
     } = props;
 
     if (radius < 1) return;
@@ -16,35 +56,13 @@ function renderCreature(ctx, props) {
 
     ctx.strokeStyle = '#1a1a1a';
     ctx.fillStyle = '#1a1a1a';
-    ctx.lineWidth = Math.max(2, radius / 8);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    if (tailSegments.length > 2) {
-        ctx.beginPath();
-        const tailStart = tailSegments[0];
-        ctx.moveTo(tailStart.x, tailStart.y);
-
-        for (let i = 1; i < tailSegments.length; i++) {
-            const t = i / tailSegments.length;
-            const wiggle = Math.sin(wigglePhase + i * tailWiggleFreq) * tailWiggleScale * t;
-            const perpX = -vy;
-            const perpY = vx;
-            const len = Math.sqrt(perpX * perpX + perpY * perpY);
-            if (len > 0.1) {
-                const wx = (perpX / len) * wiggle;
-                const wy = (perpY / len) * wiggle;
-                ctx.lineTo(tailSegments[i].x + wx, tailSegments[i].y + wy);
-            } else {
-                const fallbackAngle = wigglePhase + i * 0.5;
-                const wx = Math.cos(fallbackAngle) * wiggle * 0.5;
-                const wy = Math.sin(fallbackAngle) * wiggle * 0.5;
-                ctx.lineTo(tailSegments[i].x + wx, tailSegments[i].y + wy);
-            }
-        }
-
-        ctx.lineWidth = Math.max(3, radius / 4);
-        ctx.stroke();
+    if (tailSegments.length >= 2) {
+        const baseWidth = Math.max(2, radius * CONFIG.tail.baseWidthRatio);
+        const tipWidth = CONFIG.tail.tipWidth;
+        renderTaperedTail(ctx, tailSegments, baseWidth, tipWidth);
     }
 
     ctx.beginPath();
@@ -90,7 +108,8 @@ function renderCreature(ctx, props) {
     }
 
     if (caught) {
-        ctx.fillStyle = `rgba(255, 200, 50, ${caughtTime / 20})`;
+        const alpha = Math.min(1, caughtTime / 20);
+        ctx.fillStyle = `rgba(255, 200, 50, ${alpha})`;
         ctx.beginPath();
         ctx.arc(x, y, radius * 2, 0, Math.PI * 2);
         ctx.fill();
@@ -99,4 +118,4 @@ function renderCreature(ctx, props) {
     ctx.restore();
 }
 
-export { renderCreature };
+export { renderCreature, renderTaperedTail };

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Creature } from '../src/creature.js';
 
 describe('Creature', () => {
@@ -21,8 +21,8 @@ describe('Creature', () => {
             expect(creature.radius).toBeGreaterThan(0);
         });
 
-        it('has tail segments', () => {
-            expect(creature.tailSegments.length).toBe(8);
+        it('has tail chain with correct segment count', () => {
+            expect(creature.tailSegments.length).toBe(16);
         });
 
         it('spawns with one coordinate outside canvas', () => {
@@ -57,6 +57,14 @@ describe('Creature', () => {
             creature.update();
             expect(creature.caughtTime).toBe(1);
         });
+
+        it('updates tail chain on each frame', () => {
+            const segsBefore = creature.tailSegments.map(s => ({ x: s.x, y: s.y }));
+            creature.update();
+            const segsAfter = creature.tailSegments;
+            const anchorMoved = segsAfter[0].x !== segsBefore[0].x || segsAfter[0].y !== segsBefore[0].y;
+            expect(anchorMoved).toBe(true);
+        });
     });
 
     describe('checkClick', () => {
@@ -89,9 +97,6 @@ describe('Creature', () => {
             expect(props).toHaveProperty('y');
             expect(props).toHaveProperty('radius');
             expect(props).toHaveProperty('tailSegments');
-            expect(props).toHaveProperty('wigglePhase');
-            expect(props).toHaveProperty('vx');
-            expect(props).toHaveProperty('vy');
             expect(props).toHaveProperty('blinking');
             expect(props).toHaveProperty('eyeOffset');
             expect(props).toHaveProperty('eyeSizeRatio');
@@ -104,6 +109,30 @@ describe('Creature', () => {
             const props = creature.getVisualProps();
             expect(props.eyeSizeRatio).toBe(0.35);
             expect(props.eyeSpacingRatio).toBe(0.3);
+        });
+
+        it('tailSegments is an array of {x, y} objects', () => {
+            const props = creature.getVisualProps();
+            expect(Array.isArray(props.tailSegments)).toBe(true);
+            props.tailSegments.forEach(s => {
+                expect(s).toHaveProperty('x');
+                expect(s).toHaveProperty('y');
+            });
+        });
+    });
+
+    describe('tailSegments', () => {
+        it('returns segments from tail chain', () => {
+            const segs = creature.tailSegments;
+            expect(segs.length).toBe(16);
+        });
+
+        it('segments update after creature moves', () => {
+            const initialFirst = creature.tailSegments[0];
+            creature.update();
+            creature.update();
+            const afterFirst = creature.tailSegments[0];
+            expect(afterFirst.x).not.toBe(initialFirst.x);
         });
     });
 });

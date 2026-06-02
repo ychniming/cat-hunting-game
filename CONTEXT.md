@@ -16,6 +16,9 @@
 | **玩家** (Player) | 游戏模式下的互动者（人或猫咪） | 与"观众"区分 |
 | **停留时间** (Dwell Time) | 生物在屏幕上的总生命周期 | 动画模式关键参数 |
 | **移动模式** (Movement Pattern) | 生物的移动行为类型 | 漫游 / 边缘爬行 / 穿越屏幕 |
+| **尾巴链** (TailChain) | 基于 Verlet 积分的物理链，模拟尾巴运动 | 生物尾巴的物理引擎 |
+| **锥形渲染** (Tapered Rendering) | 从根部到尖端线宽递减的绘制方式 | 尾巴视觉呈现 |
+| **状态感知物理** (State-Aware Physics) | 尾巴物理参数随生物状态动态调整 | 暂停时尾巴下垂，移动时自然摆动 |
 
 ## 领域边界
 
@@ -38,6 +41,7 @@
 2. **Canvas渲染** - HTML5 Canvas 2D，不引入游戏引擎
 3. **Web Audio API** - 程序化生成音效，不依赖外部音频文件
 4. **PWA + Cordova** - 网页版为主，Android APK为辅助
+5. **Verlet 积分尾巴** - 自实现物理链，不引入物理引擎库
 
 ### 待迭代决策
 1. 生物停留时间随机范围（当前：5-15秒）
@@ -67,6 +71,7 @@
 │   ├── animation-creature.js # 动画模式生物（含状态机）
 │   ├── creature-states.js # 动画生物状态机定义
 │   ├── creature-renderer.js # 生物渲染函数
+│   ├── tail-chain.js   # Verlet 积分尾巴物理链
 │   ├── particle.js     # 粒子效果
 │   ├── sound-manager.js # 音频管理
 │   ├── input-handler.js # 输入处理
