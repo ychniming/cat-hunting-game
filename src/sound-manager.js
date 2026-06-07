@@ -37,12 +37,17 @@ class SoundManager {
         }
     }
 
-    startBackgroundMusic() {
+    _ensureContext() {
         if (!this.audioCtx) this.init();
-        if (!this.audioCtx) return;
+        if (!this.audioCtx) return false;
         if (this.audioCtx.state === 'suspended') {
             this.audioCtx.resume();
         }
+        return true;
+    }
+
+    startBackgroundMusic() {
+        if (!this._ensureContext()) return;
         if (this.isPlaying) return;
 
         this.isPlaying = true;
@@ -99,11 +104,7 @@ class SoundManager {
     }
 
     startCrawlSound() {
-        if (!this.audioCtx) this.init();
-        if (!this.audioCtx) return;
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
-        }
+        if (!this._ensureContext()) return;
         if (this.crawlNoise) return;
 
         const bufferSize = this.audioCtx.sampleRate * 2;
@@ -152,11 +153,7 @@ class SoundManager {
     }
 
     playPauseSound() {
-        if (!this.audioCtx) this.init();
-        if (!this.audioCtx) return;
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
-        }
+        if (!this._ensureContext()) return;
 
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
@@ -188,11 +185,7 @@ class SoundManager {
     }
 
     playCatchSound(combo) {
-        if (!this.audioCtx) this.init();
-        if (!this.audioCtx) return;
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
-        }
+        if (!this._ensureContext()) return;
 
         const clampedCombo = Math.min(combo, 10);
         const startFreq = 600 + clampedCombo * 80;
@@ -225,10 +218,6 @@ class SoundManager {
 
     destroy() {
         this.stopAll();
-        if (this.crawlFilter) {
-            this.crawlFilter.disconnect();
-            this.crawlFilter = null;
-        }
         if (this.masterGain) {
             this.masterGain.disconnect();
             this.masterGain = null;

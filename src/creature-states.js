@@ -11,24 +11,16 @@ class EnteringState {
     }
 
     update(creature) {
-        const dx = creature.targetX - creature.x;
-        const dy = creature.targetY - creature.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < 10 || creature.lifeTimer > 120) {
+        if (creature.isNearTarget(10) || creature.isEnteringTimeout(120)) {
             return 'moving';
         }
 
-        const angle = Math.atan2(dy, dx);
-        creature.vx = Math.cos(angle) * creature.speed;
-        creature.vy = Math.sin(angle) * creature.speed;
+        creature.steerToward(creature.targetX, creature.targetY, creature.speed);
         return null;
     }
 
     enter(creature) {
-        const angle = Math.atan2(creature.targetY - creature.y, creature.targetX - creature.x);
-        creature.vx = Math.cos(angle) * creature.speed;
-        creature.vy = Math.sin(angle) * creature.speed;
+        creature.steerToward(creature.targetX, creature.targetY, creature.speed);
     }
 
     exit() {}
@@ -42,13 +34,13 @@ class MovingState {
     }
 
     update(creature) {
-        creature.patternTimer++;
+        creature.incrementPatternTimer();
 
-        if (creature.patternTimer > creature.patternDuration) {
+        if (creature.isPatternExpired()) {
             return 'pausing';
         }
 
-        if (creature.lifeTimer > creature.totalLife - creature.exitDelay) {
+        if (creature.isLifeExpiring()) {
             return 'exiting';
         }
 
@@ -68,12 +60,7 @@ class MovingState {
     }
 
     enter(creature) {
-        creature.patternTimer = 0;
-        creature.movePattern = Math.floor(Math.random() * 3);
-        creature.patternDuration = 100 + Math.random() * 200;
-        const angle = Math.random() * Math.PI * 2;
-        creature.vx = Math.cos(angle) * creature.speed;
-        creature.vy = Math.sin(angle) * creature.speed;
+        creature.resetPattern();
         this._edgeTarget = this._computeEdgeTarget(creature);
         this._crossTarget = this._computeCrossTarget(creature);
     }
@@ -120,32 +107,21 @@ class MovingState {
         const noiseX = Math.sin(creature.wigglePhase * 2) * 0.3;
         const noiseY = Math.cos(creature.wigglePhase * 1.7) * 0.3;
 
-        creature.vx += noiseX;
-        creature.vy += noiseY;
+        creature.addVelocityOffset(noiseX, noiseY);
+        creature.clampSpeed(creature.speed);
 
-        const speed = Math.sqrt(creature.vx * creature.vx + creature.vy * creature.vy);
-        if (speed > creature.speed) {
-            creature.vx = (creature.vx / speed) * creature.speed;
-            creature.vy = (creature.vy / speed) * creature.speed;
-        } else if (speed < creature.speed * 0.5) {
+        const speed = creature.getSpeed();
+        if (speed < creature.speed * 0.5) {
             const angle = Math.random() * Math.PI * 2;
-            creature.vx = Math.cos(angle) * creature.speed;
-            creature.vy = Math.sin(angle) * creature.speed;
+            creature.setVelocity(angle, creature.speed);
         }
 
-        if (creature.x < 100) creature.vx += 0.2;
-        if (creature.x > creature.canvasWidth - 100) creature.vx -= 0.2;
-        if (creature.y < 100) creature.vy += 0.2;
-        if (creature.y > creature.canvasHeight - 100) creature.vy -= 0.2;
+        creature.applyBoundaryForce(100, 0.2);
     }
 
     _moveEdgeCrawl(creature) {
         if (!this._edgeTarget) return;
-        const dx = this._edgeTarget.x - creature.x;
-        const dy = this._edgeTarget.y - creature.y;
-        const angle = Math.atan2(dy, dx);
-        creature.vx = Math.cos(angle) * creature.speed * 0.8;
-        creature.vy = Math.sin(angle) * creature.speed * 0.8;
+        creature.steerToward(this._edgeTarget.x, this._edgeTarget.y, creature.speed * 0.8);
     }
 
     _moveCrossScreen(creature) {
@@ -153,9 +129,8 @@ class MovingState {
         const dx = this._crossTarget.x - creature.x;
         const dy = this._crossTarget.y - creature.y;
         const angle = Math.atan2(dy, dx);
-
-        creature.vx = Math.cos(angle + Math.sin(creature.wigglePhase) * 0.1) * creature.speed;
-        creature.vy = Math.sin(angle + Math.sin(creature.wigglePhase) * 0.1) * creature.speed;
+        const wobbleAngle = angle + Math.sin(creature.wigglePhase) * 0.1;
+        creature.setVelocity(wobbleAngle, creature.speed);
     }
 }
 
@@ -165,15 +140,14 @@ class PausingState {
     }
 
     update(creature) {
-        creature.stateTimer++;
-        creature.vx *= 0.9;
-        creature.vy *= 0.9;
+        creature.incrementStateTimer();
+        creature.decelerate(0.9);
 
-        if (creature.stateTimer > creature.pauseDuration) {
+        if (creature.isPauseDurationExceeded()) {
             return 'moving';
         }
 
-        if (creature.lifeTimer > creature.totalLife - creature.exitDelay) {
+        if (creature.isLifeExpiring()) {
             return 'exiting';
         }
 
@@ -181,7 +155,7 @@ class PausingState {
     }
 
     enter(creature) {
-        creature.stateTimer = 0;
+        creature.resetStateTimer();
     }
 
     exit() {}
@@ -200,19 +174,16 @@ class ExitingState {
         const dy = this._exitTarget.y - creature.y;
 
         if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
-            creature.vx = creature.speed * 1.5;
-            creature.vy = 0;
+            creature.setVelocity(0, creature.speed * 1.5);
         } else {
-            const angle = Math.atan2(dy, dx);
-            creature.vx = Math.cos(angle) * creature.speed * 1.5;
-            creature.vy = Math.sin(angle) * creature.speed * 1.5;
+            creature.steerToward(this._exitTarget.x, this._exitTarget.y, creature.speed * 1.5);
         }
 
         return null;
     }
 
     enter(creature) {
-        creature.exiting = true;
+        creature.setExiting();
 
         const margin = 100;
         const candidates = [

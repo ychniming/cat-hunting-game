@@ -331,4 +331,131 @@ describe('SoundManager', () => {
             expect(gain.disconnect).toHaveBeenCalled();
         });
     });
+
+    describe('_ensureContext', () => {
+        it('exists as a method on SoundManager', () => {
+            expect(typeof manager._ensureContext).toBe('function');
+        });
+
+        it('calls init when audioCtx is null', () => {
+            const initSpy = vi.spyOn(manager, 'init');
+            manager._ensureContext();
+            expect(initSpy).toHaveBeenCalled();
+            initSpy.mockRestore();
+        });
+
+        it('does not call init when audioCtx already exists', () => {
+            manager.init();
+            const initSpy = vi.spyOn(manager, 'init');
+            manager._ensureContext();
+            expect(initSpy).not.toHaveBeenCalled();
+            initSpy.mockRestore();
+        });
+
+        it('returns false when audioCtx creation fails', () => {
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            const result = manager._ensureContext();
+            expect(result).toBe(false);
+        });
+
+        it('returns true when audioCtx exists after init', () => {
+            const result = manager._ensureContext();
+            expect(result).toBe(true);
+        });
+
+        it('resumes suspended context', () => {
+            manager.init();
+            mockCtx.state = 'suspended';
+            manager._ensureContext();
+            expect(mockCtx.resume).toHaveBeenCalled();
+        });
+
+        it('does not resume running context', () => {
+            manager.init();
+            mockCtx.state = 'running';
+            manager._ensureContext();
+            expect(mockCtx.resume).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('public methods use _ensureContext', () => {
+        it('startBackgroundMusic calls _ensureContext', () => {
+            const spy = vi.spyOn(manager, '_ensureContext');
+            manager.startBackgroundMusic();
+            expect(spy).toHaveBeenCalled();
+            spy.mockRestore();
+        });
+
+        it('startCrawlSound calls _ensureContext', () => {
+            const spy = vi.spyOn(manager, '_ensureContext');
+            manager.startCrawlSound();
+            expect(spy).toHaveBeenCalled();
+            spy.mockRestore();
+        });
+
+        it('playPauseSound calls _ensureContext', () => {
+            const spy = vi.spyOn(manager, '_ensureContext');
+            manager.playPauseSound();
+            expect(spy).toHaveBeenCalled();
+            spy.mockRestore();
+        });
+
+        it('playCatchSound calls _ensureContext', () => {
+            const spy = vi.spyOn(manager, '_ensureContext');
+            manager.playCatchSound(1);
+            expect(spy).toHaveBeenCalled();
+            spy.mockRestore();
+        });
+    });
+
+    describe('destroy no double disconnect', () => {
+        it('does not disconnect crawlFilter after stopAll already cleaned it', () => {
+            manager.init();
+            manager.startCrawlSound();
+            const filter = manager.crawlFilter;
+            const filterDisconnectSpy = vi.spyOn(filter, 'disconnect');
+            manager.destroy();
+            // disconnect should be called exactly once (by stopCrawlSound via stopAll)
+            expect(filterDisconnectSpy).toHaveBeenCalledTimes(1);
+            filterDisconnectSpy.mockRestore();
+        });
+
+        it('crawlFilter is null after destroy', () => {
+            manager.init();
+            manager.startCrawlSound();
+            manager.destroy();
+            expect(manager.crawlFilter).toBeNull();
+        });
+    });
+
+    describe('edge cases after destroy', () => {
+        it('startBackgroundMusic does not crash after destroy', () => {
+            manager.init();
+            manager.destroy();
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            expect(() => manager.startBackgroundMusic()).not.toThrow();
+        });
+
+        it('playCatchSound does not crash after destroy', () => {
+            manager.init();
+            manager.destroy();
+            globalThis.window = {
+                AudioContext: function() { throw new Error('not supported'); }
+            };
+            expect(() => manager.playCatchSound(5)).not.toThrow();
+        });
+
+        it('rapid start/stop/start cycle does not crash', () => {
+            expect(() => {
+                manager.startCrawlSound();
+                manager.stopCrawlSound();
+                manager.startCrawlSound();
+                manager.stopCrawlSound();
+            }).not.toThrow();
+        });
+    });
 });

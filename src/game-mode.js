@@ -9,18 +9,26 @@ class GameMode {
         this.creatures = [];
         this.particles = [];
         this.score = 0;
-        this.time = CONFIG.game.duration;
+        this._time = CONFIG.game.duration;
         this.combo = 0;
         this.maxCombo = 0;
         this.running = false;
         this.spawnTimer = 0;
         this.spawnInterval = CONFIG.game.spawnIntervalBase;
         this.gameTime = 0;
+        this._accumulatedMs = 0;
+        this._startTimestamp = 0;
+    }
+
+    get time() {
+        if (!this.running) return this._time;
+        const elapsedMs = this._accumulatedMs + (performance.now() - this._startTimestamp);
+        return Math.max(0, CONFIG.game.duration - Math.floor(elapsedMs / 1000));
     }
 
     start() {
         this.score = 0;
-        this.time = CONFIG.game.duration;
+        this._time = CONFIG.game.duration;
         this.combo = 0;
         this.maxCombo = 0;
         this.creatures = [];
@@ -28,10 +36,31 @@ class GameMode {
         this.running = true;
         this.spawnTimer = 0;
         this.gameTime = 0;
+        this._accumulatedMs = 0;
+        this._startTimestamp = performance.now();
     }
 
     stop() {
+        if (this.running) {
+            this._time = this.time;
+            this._accumulatedMs += performance.now() - this._startTimestamp;
+        }
         this.running = false;
+    }
+
+    pause() {
+        if (this.running) {
+            this._time = this.time;
+            this._accumulatedMs += performance.now() - this._startTimestamp;
+            this.running = false;
+        }
+    }
+
+    resume() {
+        if (!this.running && this._time > 0) {
+            this._startTimestamp = performance.now();
+            this.running = true;
+        }
     }
 
     update() {
@@ -39,11 +68,13 @@ class GameMode {
 
         this.gameTime++;
 
-        if (this.gameTime % 60 === 0) {
-            this.time--;
-            if (this.time <= 0) {
-                this.running = false;
-            }
+        const elapsedMs = this._accumulatedMs + (performance.now() - this._startTimestamp);
+        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+        this._time = Math.max(0, CONFIG.game.duration - elapsedSeconds);
+
+        if (this._time <= 0) {
+            this.running = false;
+            return;
         }
 
         this.spawnTimer++;

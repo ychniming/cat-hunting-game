@@ -1,9 +1,10 @@
 import { STATE_MAP, STATE_TRANSITIONS } from './creature-states.js';
 import { CONFIG } from './config.js';
-import { TailChain } from './tail-chain.js';
+import { CreatureCore } from './creature-core.js';
 
 class AnimationCreature {
     constructor(canvasWidth, canvasHeight) {
+        this.core = new CreatureCore(canvasWidth, canvasHeight);
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
         this.reset();
@@ -14,27 +15,9 @@ class AnimationCreature {
         const baseSpeed = 3 - (this.radius - 20) / 20 * 1.5;
         this.speed = baseSpeed + Math.random() * 1;
 
-        const side = Math.floor(Math.random() * 4);
-        const margin = 60;
-
-        switch(side) {
-            case 0:
-                this.x = Math.random() * this.canvasWidth;
-                this.y = -margin;
-                break;
-            case 1:
-                this.x = this.canvasWidth + margin;
-                this.y = Math.random() * this.canvasHeight;
-                break;
-            case 2:
-                this.x = Math.random() * this.canvasWidth;
-                this.y = this.canvasHeight + margin;
-                break;
-            case 3:
-                this.x = -margin;
-                this.y = Math.random() * this.canvasHeight;
-                break;
-        }
+        const pos = this.core.spawnFromEdge(60);
+        this.x = pos.x;
+        this.y = pos.y;
 
         this.targetX = this.canvasWidth * 0.15 + Math.random() * this.canvasWidth * 0.7;
         this.targetY = this.canvasHeight * 0.15 + Math.random() * this.canvasHeight * 0.7;
@@ -47,21 +30,17 @@ class AnimationCreature {
         this.totalLife = 600 + Math.random() * 900;
         this.lifeTimer = 0;
 
-        this.wigglePhase = Math.random() * Math.PI * 2;
-        this.wiggleSpeed = 0.08 + Math.random() * 0.06;
+        this.core.initSharedProperties({ minRadius: this.radius, maxRadius: this.radius, minWiggleSpeed: 0.08, maxWiggleSpeed: 0.14 });
 
         const segCount = CONFIG.animation.tailSegments;
         const segLen = CONFIG.tail.segmentLength;
-        this.tailChain = new TailChain(this.x, this.y, segCount, segLen, {
+        this.tailChain = this.core.createTail(this.x, this.y, segCount, segLen, {
             gravity: CONFIG.tail.gravity,
             stiffness: CONFIG.tail.stiffness,
             damping: CONFIG.tail.damping,
             constraintIterations: CONFIG.tail.constraintIterations
         });
 
-        this.eyeOffset = 0;
-        this.blinkTimer = Math.random() * 200;
-        this.blinking = false;
         this.alive = true;
         this.exiting = false;
 
@@ -89,21 +68,11 @@ class AnimationCreature {
     update() {
         if (!this.alive) return false;
 
-        this.wigglePhase += this.wiggleSpeed;
-        this.eyeOffset = Math.sin(this.wigglePhase) * 2;
-        this.blinkTimer--;
-
-        if (this.blinkTimer <= 0) {
-            this.blinking = true;
-            if (this.blinkTimer < -8) {
-                this.blinking = false;
-                this.blinkTimer = 80 + Math.random() * 250;
-            }
-        }
+        this.core.wigglePhase += this.core.wiggleSpeed;
+        this.core.updateBlink(8, 80, 330);
 
         this.lifeTimer++;
 
-        const prevStateName = this._currentState.name;
         const transition = this._currentState.update(this);
         if (transition && STATE_TRANSITIONS[this._currentState.name].includes(transition)) {
             this.state = transition;
@@ -143,13 +112,9 @@ class AnimationCreature {
     }
 
     getVisualProps() {
+        const base = this.core.getBaseVisualProps(this.x, this.y, this.tailSegments);
         return {
-            x: this.x,
-            y: this.y,
-            radius: this.radius,
-            tailSegments: this.tailSegments,
-            blinking: this.blinking,
-            eyeOffset: this.eyeOffset,
+            ...base,
             eyeSizeRatio: 0.3,
             eyeSpacingRatio: 0.25,
             pupilSizeRatio: 0.45,
@@ -165,6 +130,97 @@ class AnimationCreature {
 
     isPausing() {
         return this.state === 'pausing';
+    }
+
+    // --- Semantic action methods for state classes ---
+
+    steerToward(targetX, targetY, speed) {
+        const dx = targetX - this.x;
+        const dy = targetY - this.y;
+        const angle = Math.atan2(dy, dx);
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+    }
+
+    setVelocity(angle, speed) {
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+    }
+
+    decelerate(factor) {
+        this.vx *= factor;
+        this.vy *= factor;
+    }
+
+    resetPattern() {
+        this.patternTimer = 0;
+        this.movePattern = Math.floor(Math.random() * 3);
+        this.patternDuration = 100 + Math.random() * 200;
+        const angle = Math.random() * Math.PI * 2;
+        this.vx = Math.cos(angle) * this.speed;
+        this.vy = Math.sin(angle) * this.speed;
+    }
+
+    incrementPatternTimer() {
+        this.patternTimer++;
+    }
+
+    isPatternExpired() {
+        return this.patternTimer > this.patternDuration;
+    }
+
+    isLifeExpiring() {
+        return this.lifeTimer > this.totalLife - this.exitDelay;
+    }
+
+    incrementStateTimer() {
+        this.stateTimer++;
+    }
+
+    isPauseDurationExceeded() {
+        return this.stateTimer > this.pauseDuration;
+    }
+
+    isNearTarget(threshold) {
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        return Math.sqrt(dx * dx + dy * dy) < threshold;
+    }
+
+    isEnteringTimeout(limit) {
+        return this.lifeTimer > limit;
+    }
+
+    setExiting() {
+        this.exiting = true;
+    }
+
+    addVelocityOffset(dvx, dvy) {
+        this.vx += dvx;
+        this.vy += dvy;
+    }
+
+    clampSpeed(maxSpeed) {
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > maxSpeed) {
+            this.vx = (this.vx / speed) * maxSpeed;
+            this.vy = (this.vy / speed) * maxSpeed;
+        }
+    }
+
+    applyBoundaryForce(margin, force) {
+        if (this.x < margin) this.vx += force;
+        if (this.x > this.canvasWidth - margin) this.vx -= force;
+        if (this.y < margin) this.vy += force;
+        if (this.y > this.canvasHeight - margin) this.vy -= force;
+    }
+
+    getSpeed() {
+        return Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    }
+
+    resetStateTimer() {
+        this.stateTimer = 0;
     }
 }
 

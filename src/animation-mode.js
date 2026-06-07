@@ -52,18 +52,19 @@ class AnimationMode {
         } else {
             const wasMoving = this.creature.isMoving();
             this.creature.update();
-            const isMoving = this.creature.isMoving();
-            const isPausing = this.creature.isPausing();
-
-            if (wasMoving && !isMoving && isPausing) {
-                soundEvents.push('stopCrawl');
-                soundEvents.push('playPause');
-            } else if (!wasMoving && isMoving) {
-                soundEvents.push('startCrawl');
-            }
 
             if (!this.creature.alive) {
                 soundEvents.push('stopCrawl');
+            } else {
+                const isMoving = this.creature.isMoving();
+                const isPausing = this.creature.isPausing();
+
+                if (wasMoving && !isMoving && isPausing) {
+                    soundEvents.push('stopCrawl');
+                    soundEvents.push('playPause');
+                } else if (!wasMoving && isMoving) {
+                    soundEvents.push('startCrawl');
+                }
             }
         }
 

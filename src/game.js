@@ -19,6 +19,12 @@ class Game {
         this.ui = new UIController();
         this.inputHandler = new InputHandler(this.canvas, (x, y) => this.handleInput(x, y));
 
+        this._soundEventMap = {
+            startCrawl: () => this.soundManager.startCrawlSound(),
+            stopCrawl: () => this.soundManager.stopCrawlSound(),
+            playPause: () => this.soundManager.playPauseSound()
+        };
+
         this._actionHandlers = {
             startGameMode: () => this.startGameMode(),
             startAnimationMode: (param) => this.startAnimationMode(param),
@@ -107,10 +113,8 @@ class Game {
             this._comboTimeout = setTimeout(() => this.ui.hideCombo(), CONFIG.visual.comboDisplayDuration);
         } else {
             this.ui.hideCombo();
-            if (this._comboTimeout) {
-                clearTimeout(this._comboTimeout);
-                this._comboTimeout = null;
-            }
+            if (this._comboTimeout) clearTimeout(this._comboTimeout);
+            this._comboTimeout = null;
         }
 
         this.ui.updateScore(result.score);
@@ -123,55 +127,54 @@ class Game {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         if (this.mode === 'game' || this.mode === 'gameOver') {
-            if (this.mode === 'game') {
-                this.gameMode.update();
-
-                if (this.gameMode.isOver()) {
-                    this.ui.showGameOver(this.gameMode.score, this.gameMode.maxCombo);
-                    this.mode = 'gameOver';
-                }
-
-                if (this.gameMode.time !== this._lastTime) {
-                    this.ui.updateTimer(this.gameMode.time);
-                    this._lastTime = this.gameMode.time;
-                }
-            }
-
-            const state = this.gameMode.getState();
-            for (const creature of state.creatures) {
-                renderCreature(this.ctx, creature.getVisualProps());
-            }
-            for (const particle of state.particles) {
-                particle.draw(this.ctx);
-            }
+            this._renderGameFrame();
         } else if (this.mode === 'animation') {
-            const result = this.animationMode.update();
-
-            for (const event of result.soundEvents) {
-                switch(event) {
-                    case 'startCrawl':
-                        this.soundManager.startCrawlSound();
-                        break;
-                    case 'stopCrawl':
-                        this.soundManager.stopCrawlSound();
-                        break;
-                    case 'playPause':
-                        this.soundManager.playPauseSound();
-                        break;
-                }
-            }
-
-            if (result.expired) {
-                this.showMenu();
-            }
-
-            const animState = this.animationMode.getState();
-            if (animState.creature) {
-                renderCreature(this.ctx, animState.creature.getVisualProps());
-            }
+            this._renderAnimationFrame();
         }
 
         this._rafId = requestAnimationFrame(this.loop);
+    }
+
+    _renderGameFrame() {
+        if (this.mode === 'game') {
+            this.gameMode.update();
+
+            if (this.gameMode.isOver()) {
+                this.ui.showGameOver(this.gameMode.score, this.gameMode.maxCombo);
+                this.mode = 'gameOver';
+            }
+
+            if (this.gameMode.time !== this._lastTime) {
+                this.ui.updateTimer(this.gameMode.time);
+                this._lastTime = this.gameMode.time;
+            }
+        }
+
+        const state = this.gameMode.getState();
+        for (const creature of state.creatures) {
+            renderCreature(this.ctx, creature.getVisualProps());
+        }
+        for (const particle of state.particles) {
+            particle.draw(this.ctx);
+        }
+    }
+
+    _renderAnimationFrame() {
+        const result = this.animationMode.update();
+
+        for (const event of result.soundEvents) {
+            const handler = this._soundEventMap[event];
+            if (handler) handler();
+        }
+
+        if (result.expired) {
+            this.showMenu();
+        }
+
+        const animState = this.animationMode.getState();
+        if (animState.creature) {
+            renderCreature(this.ctx, animState.creature.getVisualProps());
+        }
     }
 
     destroy() {
@@ -194,4 +197,3 @@ class Game {
 }
 
 export { Game };
-new Game();
