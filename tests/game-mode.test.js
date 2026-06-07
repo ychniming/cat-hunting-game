@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GameMode } from '../src/game-mode.js';
+import { CONFIG } from '../src/config.js';
 
 describe('GameMode', () => {
     let gameMode;
@@ -419,6 +420,130 @@ describe('GameMode', () => {
                 expect(creature.canvasWidth).toBe(1024);
                 expect(creature.canvasHeight).toBe(768);
             }
+        });
+    });
+
+    describe('elapsedSeconds - real-time game progression', () => {
+        let nowSpy;
+
+        beforeEach(() => {
+            nowSpy = vi.spyOn(performance, 'now');
+        });
+
+        afterEach(() => {
+            nowSpy.mockRestore();
+        });
+
+        it('returns 0 when game has not started', () => {
+            expect(gameMode.elapsedSeconds).toBe(0);
+        });
+
+        it('returns 0 immediately after start', () => {
+            nowSpy.mockReturnValue(0);
+            gameMode.start();
+            expect(gameMode.elapsedSeconds).toBe(0);
+        });
+
+        it('returns elapsed seconds based on real time', () => {
+            nowSpy.mockReturnValue(0);
+            gameMode.start();
+
+            nowSpy.mockReturnValue(5000);
+            expect(gameMode.elapsedSeconds).toBe(5);
+        });
+
+        it('is frame-rate independent', () => {
+            nowSpy.mockReturnValue(0);
+            gameMode.start();
+
+            // 120 updates in 5 seconds (high fps)
+            for (let i = 0; i < 120; i++) {
+                nowSpy.mockReturnValue((i + 1) * (5000 / 120));
+                gameMode.update();
+            }
+
+            expect(gameMode.elapsedSeconds).toBe(5);
+        });
+
+        it('does not count paused time', () => {
+            nowSpy.mockReturnValue(0);
+            gameMode.start();
+
+            nowSpy.mockReturnValue(5000);
+            gameMode.update();
+
+            gameMode.pause();
+
+            nowSpy.mockReturnValue(15000);
+            expect(gameMode.elapsedSeconds).toBe(5);
+        });
+
+        it('resumes counting after pause', () => {
+            nowSpy.mockReturnValue(0);
+            gameMode.start();
+
+            nowSpy.mockReturnValue(5000);
+            gameMode.update();
+
+            gameMode.pause();
+
+            nowSpy.mockReturnValue(15000);
+            gameMode.resume();
+
+            nowSpy.mockReturnValue(20000);
+            gameMode.update();
+
+            expect(gameMode.elapsedSeconds).toBe(10);
+        });
+
+        it('returns correct value after game ends naturally', () => {
+            nowSpy.mockReturnValue(0);
+            gameMode.start();
+
+            nowSpy.mockReturnValue(60000);
+            gameMode.update();
+
+            // Game ended naturally, elapsedSeconds should be 60
+            expect(gameMode.elapsedSeconds).toBe(60);
+        });
+
+        it('spawn interval accelerates based on real elapsed seconds', () => {
+            nowSpy.mockReturnValue(0);
+            gameMode.start();
+
+            // Before acceleration kicks in (less than 5 seconds)
+            nowSpy.mockReturnValue(4000);
+            gameMode.update();
+            const earlyInterval = Math.max(
+                CONFIG.game.spawnIntervalMin,
+                gameMode.spawnInterval - Math.floor(gameMode.elapsedSeconds / CONFIG.game.spawnAccelerationRateSec) * CONFIG.game.spawnAccelerationStep
+            );
+
+            // After acceleration kicks in (more than 5 seconds)
+            nowSpy.mockReturnValue(10000);
+            gameMode.update();
+            const lateInterval = Math.max(
+                CONFIG.game.spawnIntervalMin,
+                gameMode.spawnInterval - Math.floor(gameMode.elapsedSeconds / CONFIG.game.spawnAccelerationRateSec) * CONFIG.game.spawnAccelerationStep
+            );
+
+            // Later interval should be smaller (spawn faster)
+            expect(lateInterval).toBeLessThan(earlyInterval);
+        });
+
+        it('double spawn triggers based on real elapsed seconds', () => {
+            nowSpy.mockReturnValue(0);
+            gameMode.start();
+
+            // Before threshold (less than 10 seconds)
+            nowSpy.mockReturnValue(5000);
+            gameMode.update();
+            expect(gameMode.elapsedSeconds).toBeLessThan(CONFIG.game.doubleSpawnThresholdSec);
+
+            // After threshold (more than 10 seconds)
+            nowSpy.mockReturnValue(15000);
+            gameMode.update();
+            expect(gameMode.elapsedSeconds).toBeGreaterThan(CONFIG.game.doubleSpawnThresholdSec);
         });
     });
 });

@@ -33,8 +33,8 @@ describe('CONFIG', () => {
       expect(CONFIG.game.spawnIntervalMin).toBe(20);
     });
 
-    it('has spawnAccelerationRate', () => {
-      expect(CONFIG.game.spawnAccelerationRate).toBe(300);
+    it('has spawnAccelerationRateSec', () => {
+      expect(CONFIG.game.spawnAccelerationRateSec).toBe(5);
     });
 
     it('has spawnAccelerationStep', () => {
@@ -45,8 +45,8 @@ describe('CONFIG', () => {
       expect(CONFIG.game.doubleSpawnChance).toBe(0.3);
     });
 
-    it('has doubleSpawnThreshold', () => {
-      expect(CONFIG.game.doubleSpawnThreshold).toBe(600);
+    it('has doubleSpawnThresholdSec', () => {
+      expect(CONFIG.game.doubleSpawnThresholdSec).toBe(10);
     });
 
     it('has tailSegments', () => {

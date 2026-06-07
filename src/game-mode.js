@@ -15,7 +15,6 @@ class GameMode {
         this.running = false;
         this.spawnTimer = 0;
         this.spawnInterval = CONFIG.game.spawnIntervalBase;
-        this.gameTime = 0;
         this._accumulatedMs = 0;
         this._startTimestamp = 0;
     }
@@ -24,6 +23,11 @@ class GameMode {
         if (!this.running) return this._time;
         const elapsedMs = this._accumulatedMs + (performance.now() - this._startTimestamp);
         return Math.max(0, CONFIG.game.duration - Math.floor(elapsedMs / 1000));
+    }
+
+    get elapsedSeconds() {
+        const elapsedMs = this._accumulatedMs + (this.running ? (performance.now() - this._startTimestamp) : 0);
+        return Math.floor(elapsedMs / 1000);
     }
 
     start() {
@@ -35,7 +39,6 @@ class GameMode {
         this.particles = [];
         this.running = true;
         this.spawnTimer = 0;
-        this.gameTime = 0;
         this._accumulatedMs = 0;
         this._startTimestamp = performance.now();
     }
@@ -66,13 +69,12 @@ class GameMode {
     update() {
         if (!this.running) return;
 
-        this.gameTime++;
-
         const elapsedMs = this._accumulatedMs + (performance.now() - this._startTimestamp);
         const elapsedSeconds = Math.floor(elapsedMs / 1000);
         this._time = Math.max(0, CONFIG.game.duration - elapsedSeconds);
 
         if (this._time <= 0) {
+            this._accumulatedMs += performance.now() - this._startTimestamp;
             this.running = false;
             return;
         }
@@ -80,13 +82,13 @@ class GameMode {
         this.spawnTimer++;
         const currentInterval = Math.max(
             CONFIG.game.spawnIntervalMin,
-            this.spawnInterval - Math.floor(this.gameTime / CONFIG.game.spawnAccelerationRate) * CONFIG.game.spawnAccelerationStep
+            this.spawnInterval - Math.floor(elapsedSeconds / CONFIG.game.spawnAccelerationRateSec) * CONFIG.game.spawnAccelerationStep
         );
         if (this.spawnTimer >= currentInterval) {
             this.spawnTimer = 0;
             this.creatures.push(new Creature(this.canvasWidth, this.canvasHeight));
 
-            if (this.gameTime > CONFIG.game.doubleSpawnThreshold && Math.random() < CONFIG.game.doubleSpawnChance) {
+            if (elapsedSeconds >= CONFIG.game.doubleSpawnThresholdSec && Math.random() < CONFIG.game.doubleSpawnChance) {
                 this.creatures.push(new Creature(this.canvasWidth, this.canvasHeight));
             }
         }

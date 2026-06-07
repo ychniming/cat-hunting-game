@@ -121,6 +121,75 @@ describe('Creature', () => {
         });
     });
 
+    describe('semantic methods', () => {
+        it('addWiggleOffset adds velocity based on wiggle phase', () => {
+            creature.vx = 1;
+            creature.vy = 1;
+            creature.core.wigglePhase = Math.PI / 4;
+            const prevVx = creature.vx;
+            const prevVy = creature.vy;
+            creature.addWiggleOffset();
+            expect(creature.vx).not.toBe(prevVx);
+            expect(creature.vy).not.toBe(prevVy);
+        });
+
+        it('clampSpeed limits speed to maxSpeed', () => {
+            creature.vx = 10;
+            creature.vy = 10;
+            creature.clampSpeed(4);
+            const speed = Math.sqrt(creature.vx * creature.vx + creature.vy * creature.vy);
+            expect(speed).toBeLessThanOrEqual(4.01);
+        });
+
+        it('clampSpeed does not change speed when below maxSpeed', () => {
+            creature.vx = 1;
+            creature.vy = 1;
+            creature.clampSpeed(4);
+            expect(creature.vx).toBe(1);
+            expect(creature.vy).toBe(1);
+        });
+
+        it('getSpeed returns current speed magnitude', () => {
+            creature.vx = 3;
+            creature.vy = 4;
+            expect(creature.getSpeed()).toBeCloseTo(5);
+        });
+
+        it('incrementCaughtTime increments caughtTime', () => {
+            creature.caughtTime = 0;
+            creature.incrementCaughtTime();
+            expect(creature.caughtTime).toBe(1);
+        });
+
+        it('shrinkRadius reduces radius', () => {
+            creature.radius = 20;
+            creature.shrinkRadius();
+            expect(creature.radius).toBeLessThan(20);
+        });
+
+        it('isCaughtAnimationDone returns true when caughtTime >= 20', () => {
+            creature.caughtTime = 20;
+            expect(creature.isCaughtAnimationDone()).toBe(true);
+        });
+
+        it('isCaughtAnimationDone returns false when caughtTime < 20', () => {
+            creature.caughtTime = 10;
+            expect(creature.isCaughtAnimationDone()).toBe(false);
+        });
+
+        it('isOutOfBounds returns true when outside margin', () => {
+            creature.x = -200;
+            creature.y = 300;
+            expect(creature.isOutOfBounds(100)).toBe(true);
+        });
+
+        it('isOutOfBounds returns false when inside margin', () => {
+            creature.x = 400;
+            creature.y = 300;
+            expect(creature.isOutOfBounds(100)).toBe(false);
+        });
+    });
+
     describe('tailSegments', () => {
         it('returns segments from tail chain', () => {
             const segs = creature.tailSegments;

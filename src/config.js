@@ -3,10 +3,10 @@ const CONFIG = Object.freeze({
     duration: 60,
     spawnIntervalBase: 60,
     spawnIntervalMin: 20,
-    spawnAccelerationRate: 300,
+    spawnAccelerationRateSec: 5,
     spawnAccelerationStep: 5,
     doubleSpawnChance: 0.3,
-    doubleSpawnThreshold: 600,
+    doubleSpawnThresholdSec: 10,
     tailSegments: 16
   }),
   animation: Object.freeze({

@@ -40,10 +40,10 @@ class Creature {
 
     update() {
         if (this.caught) {
-            this.caughtTime++;
-            this.radius *= 0.9;
+            this.incrementCaughtTime();
+            this.shrinkRadius();
             this.tailChain.update(this.x, this.y);
-            return this.caughtTime < 20;
+            return !this.isCaughtAnimationDone();
         }
 
         this.core.wigglePhase += this.core.wiggleSpeed;
@@ -52,25 +52,52 @@ class Creature {
         this.x += this.vx;
         this.y += this.vy;
 
-        this.vx += Math.sin(this.core.wigglePhase * 2) * 0.05;
-        this.vy += Math.cos(this.core.wigglePhase * 1.5) * 0.05;
-
-        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-        const maxSpeed = 4;
-        if (speed > maxSpeed) {
-            this.vx = (this.vx / speed) * maxSpeed;
-            this.vy = (this.vy / speed) * maxSpeed;
-        }
+        this.addWiggleOffset();
+        this.clampSpeed(4);
 
         this.tailChain.update(this.x, this.y);
 
-        const margin = 100;
-        if (this.x < -margin || this.x > this.canvasWidth + margin ||
-            this.y < -margin || this.y > this.canvasHeight + margin) {
+        if (this.isOutOfBounds(100)) {
             this.alive = false;
         }
 
         return true;
+    }
+
+    // --- Semantic action methods ---
+
+    addWiggleOffset() {
+        this.vx += Math.sin(this.core.wigglePhase * 2) * 0.05;
+        this.vy += Math.cos(this.core.wigglePhase * 1.5) * 0.05;
+    }
+
+    clampSpeed(maxSpeed) {
+        const speed = this.getSpeed();
+        if (speed > maxSpeed) {
+            this.vx = (this.vx / speed) * maxSpeed;
+            this.vy = (this.vy / speed) * maxSpeed;
+        }
+    }
+
+    getSpeed() {
+        return Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    }
+
+    incrementCaughtTime() {
+        this.caughtTime++;
+    }
+
+    shrinkRadius() {
+        this.radius *= 0.9;
+    }
+
+    isCaughtAnimationDone() {
+        return this.caughtTime >= 20;
+    }
+
+    isOutOfBounds(margin) {
+        return this.x < -margin || this.x > this.canvasWidth + margin ||
+            this.y < -margin || this.y > this.canvasHeight + margin;
     }
 
     get tailSegments() {

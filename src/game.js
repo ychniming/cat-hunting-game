@@ -164,7 +164,11 @@ class Game {
 
         for (const event of result.soundEvents) {
             const handler = this._soundEventMap[event];
-            if (handler) handler();
+            if (handler) {
+                handler();
+            } else {
+                console.warn(`Unknown sound event: ${event}`);
+            }
         }
 
         if (result.expired) {

@@ -10,7 +10,7 @@
 | 术语 | 定义 | 使用场景 |
 |------|------|---------|
 | **生物核心** (CreatureCore) | 共享的生物基础逻辑：边缘生成、眨眼更新、尾巴创建、视觉属性 | Creature 和 AnimationCreature 的组合模块 |
-| **语义方法** (Semantic Method) | AnimationCreature 上的动作方法（steerToward, decelerate等），状态类通过这些方法间接操作生物 | 状态机接口深化的产物 |
+| **语义方法** (Semantic Method) | 生物上的动作方法（steerToward, decelerate, addWiggleOffset, clampSpeed等），外部通过这些方法间接操作生物 | Creature 和 AnimationCreature 共享的接口模式 |
 | **生物** (Creature) | 黑色圆形头部、白色大眼睛、带摆动尾巴的蝌蚪状生物 | 游戏模式和动画模式的核心元素 |
 | **游戏模式** (Game Mode) | 60秒计时挑战，点击捕捉生物获得分数 | 给猫咪或人玩的互动模式 |
 | **动画模式** (Animation Mode) | 无限循环播放生物移动，无交互纯观赏 | 给猫咪看的电视动画 |
@@ -44,9 +44,10 @@
 3. **Web Audio API** - 程序化生成音效，不依赖外部音频文件
 4. **PWA + Cordova** - 网页版为主，Android APK为辅助
 5. **Verlet 积分尾巴** - 自实现物理链，不引入物理引擎库
-6. **真实时间计时** - 游戏模式使用 performance.now() 而非帧计数
+6. **真实时间计时** - 游戏模式使用 performance.now() 而非帧计数，生成节奏也基于真实时间
 7. **生物核心组合** - Creature 和 AnimationCreature 通过 CreatureCore 组合共享逻辑
-8. **语义方法接口** - 状态类通过语义方法操作生物，不直接访问内部字段
+8. **语义方法接口** - 状态类和内部逻辑通过语义方法操作生物，不直接访问内部字段
+9. **声音事件映射** - 未知声音事件触发 console.warn，便于调试
 
 ### 待迭代决策
 1. 生物停留时间随机范围（当前：5-15秒）
@@ -72,7 +73,7 @@
 │   ├── config.js       # 配置常量
 │   ├── game-mode.js    # 游戏模式逻辑（真实时间计时）
 │   ├── animation-mode.js # 动画模式逻辑
-│   ├── creature.js     # 游戏模式生物
+│   ├── creature.js     # 游戏模式生物（含语义方法）
 │   ├── animation-creature.js # 动画模式生物（含语义方法+状态机）
 │   ├── creature-core.js # 生物核心共享逻辑（组合模块）
 │   ├── creature-states.js # 动画生物状态机定义

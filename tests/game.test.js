@@ -98,7 +98,7 @@ const { mockCanvas, mockElements, mockGetElementById, callTracker } = vi.hoisted
 // ---- Mock all Game dependencies ----
 vi.mock('../src/config.js', () => ({
     CONFIG: {
-        game: { duration: 60, spawnIntervalBase: 60, spawnIntervalMin: 20, spawnAccelerationRate: 300, spawnAccelerationStep: 5, doubleSpawnChance: 0.3, doubleSpawnThreshold: 600, tailSegments: 16 },
+        game: { duration: 60, spawnIntervalBase: 60, spawnIntervalMin: 20, spawnAccelerationRateSec: 5, spawnAccelerationStep: 5, doubleSpawnChance: 0.3, doubleSpawnThresholdSec: 10, tailSegments: 16 },
         animation: { spawnDelay: 60, tailSegments: 20 },
         tail: { gravity: 0.15, stiffness: 0.8, damping: 0.98, constraintIterations: 3, segmentLength: 8, baseWidthRatio: 0.6, tipWidth: 1, curlRadius: 4 },
         visual: { fps: 60, particleCount: 8, particleGravity: 0.1, comboDisplayDuration: 1000, maxParticles: 200 },
@@ -686,6 +686,28 @@ describe('Game', () => {
             }));
             game._renderAnimationFrame();
             expect(mockCreature.getVisualProps).toHaveBeenCalled();
+        });
+
+        it('warns on unknown sound event', () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            game.animationMode.update = vi.fn(() => ({
+                soundEvents: ['unknownEvent'],
+                expired: false
+            }));
+            game._renderAnimationFrame();
+            expect(warnSpy).toHaveBeenCalledWith('Unknown sound event: unknownEvent');
+            warnSpy.mockRestore();
+        });
+
+        it('does not warn on known sound events', () => {
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            game.animationMode.update = vi.fn(() => ({
+                soundEvents: ['startCrawl', 'stopCrawl', 'playPause'],
+                expired: false
+            }));
+            game._renderAnimationFrame();
+            expect(warnSpy).not.toHaveBeenCalled();
+            warnSpy.mockRestore();
         });
 
         it('does not render when no creature', () => {
