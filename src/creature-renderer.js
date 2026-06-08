@@ -1,43 +1,25 @@
 import { CONFIG } from './config.js';
 
-function renderTaperedTail(ctx, segments, baseWidth, tipWidth) {
+function renderTail(ctx, segments, width) {
     if (segments.length < 2) return;
 
     const n = segments.length;
 
-    for (let i = 0; i < n - 1; i++) {
-        const t = i / (n - 1);
-        const width = baseWidth + (tipWidth - baseWidth) * t;
+    ctx.beginPath();
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-        ctx.beginPath();
-        ctx.lineWidth = width;
-        ctx.lineCap = 'round';
+    ctx.moveTo(segments[0].x, segments[0].y);
 
-        if (i === 0) {
-            ctx.moveTo(segments[0].x, segments[0].y);
-            if (n > 2) {
-                const mx = (segments[0].x + segments[1].x) / 2;
-                const my = (segments[0].y + segments[1].y) / 2;
-                ctx.lineTo(mx, my);
-            } else {
-                ctx.lineTo(segments[1].x, segments[1].y);
-            }
-        } else if (i === n - 2) {
-            const prevMx = (segments[i - 1].x + segments[i].x) / 2;
-            const prevMy = (segments[i - 1].y + segments[i].y) / 2;
-            ctx.moveTo(prevMx, prevMy);
-            ctx.quadraticCurveTo(segments[i].x, segments[i].y, segments[i + 1].x, segments[i + 1].y);
-        } else {
-            const prevMx = (segments[i - 1].x + segments[i].x) / 2;
-            const prevMy = (segments[i - 1].y + segments[i].y) / 2;
-            const nextMx = (segments[i].x + segments[i + 1].x) / 2;
-            const nextMy = (segments[i].y + segments[i + 1].y) / 2;
-            ctx.moveTo(prevMx, prevMy);
-            ctx.quadraticCurveTo(segments[i].x, segments[i].y, nextMx, nextMy);
-        }
-
-        ctx.stroke();
+    for (let i = 1; i < n - 1; i++) {
+        const nextMx = (segments[i].x + segments[i + 1].x) / 2;
+        const nextMy = (segments[i].y + segments[i + 1].y) / 2;
+        ctx.quadraticCurveTo(segments[i].x, segments[i].y, nextMx, nextMy);
     }
+
+    ctx.lineTo(segments[n - 1].x, segments[n - 1].y);
+    ctx.stroke();
 }
 
 function renderCreature(ctx, props) {
@@ -60,9 +42,8 @@ function renderCreature(ctx, props) {
     ctx.lineJoin = 'round';
 
     if (tailSegments.length >= 2) {
-        const baseWidth = Math.max(2, radius * CONFIG.tail.baseWidthRatio);
-        const tipWidth = CONFIG.tail.tipWidth;
-        renderTaperedTail(ctx, tailSegments, baseWidth, tipWidth);
+        const tailWidth = Math.max(2, radius * CONFIG.tail.baseWidthRatio);
+        renderTail(ctx, tailSegments, tailWidth);
     }
 
     ctx.beginPath();
@@ -118,4 +99,4 @@ function renderCreature(ctx, props) {
     ctx.restore();
 }
 
-export { renderCreature, renderTaperedTail };
+export { renderCreature, renderTail };

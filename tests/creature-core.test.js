@@ -216,7 +216,6 @@ describe('CreatureCore', () => {
         it('creates a TailChain with correct segment count', () => {
             const core = new CreatureCore(800, 600);
             const tail = core.createTail(400, 300, 10, 8, {
-                gravity: 0.15,
                 stiffness: 0.8,
                 damping: 0.98,
                 constraintIterations: 3
@@ -227,7 +226,6 @@ describe('CreatureCore', () => {
         it('creates a TailChain anchored at given position', () => {
             const core = new CreatureCore(800, 600);
             const tail = core.createTail(100, 200, 5, 8, {
-                gravity: 0.15,
                 stiffness: 0.8,
                 damping: 0.98,
                 constraintIterations: 3
@@ -240,7 +238,6 @@ describe('CreatureCore', () => {
         it('creates a TailChain with custom segment length', () => {
             const core = new CreatureCore(800, 600);
             const tail = core.createTail(0, 0, 3, 12, {
-                gravity: 0.15,
                 stiffness: 0.8,
                 damping: 0.98,
                 constraintIterations: 3

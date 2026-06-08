@@ -11,7 +11,7 @@ class EnteringState {
     }
 
     update(creature) {
-        if (creature.isNearTarget(10) || creature.isEnteringTimeout(120)) {
+        if (creature.isNearTarget(10) || creature.isEnteringTimeout(360)) {
             return 'moving';
         }
 
@@ -104,8 +104,8 @@ class MovingState {
     }
 
     _moveWander(creature) {
-        const noiseX = Math.sin(creature.wigglePhase * 2) * 0.3;
-        const noiseY = Math.cos(creature.wigglePhase * 1.7) * 0.3;
+        const noiseX = Math.sin(creature.core.wigglePhase * 2) * 0.15;
+        const noiseY = Math.cos(creature.core.wigglePhase * 1.7) * 0.15;
 
         creature.addVelocityOffset(noiseX, noiseY);
         creature.clampSpeed(creature.speed);
@@ -116,21 +116,28 @@ class MovingState {
             creature.setVelocity(angle, creature.speed);
         }
 
-        creature.applyBoundaryForce(100, 0.2);
+        creature.applyBoundaryForce(100, 0.15);
     }
 
     _moveEdgeCrawl(creature) {
         if (!this._edgeTarget) return;
         creature.steerToward(this._edgeTarget.x, this._edgeTarget.y, creature.speed * 0.8);
+        creature.applyBoundaryForce(100, 0.3);
     }
 
     _moveCrossScreen(creature) {
         if (!this._crossTarget) return;
         const dx = this._crossTarget.x - creature.x;
         const dy = this._crossTarget.y - creature.y;
-        const angle = Math.atan2(dy, dx);
-        const wobbleAngle = angle + Math.sin(creature.wigglePhase) * 0.1;
-        creature.setVelocity(wobbleAngle, creature.speed);
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 30) {
+            creature.decelerate(0.92);
+        } else {
+            const angle = Math.atan2(dy, dx);
+            const wobbleAngle = angle + Math.sin(creature.core.wigglePhase) * 0.1;
+            creature.setVelocity(wobbleAngle, creature.speed);
+        }
+        creature.applyBoundaryForce(100, 0.3);
     }
 }
 
@@ -141,7 +148,13 @@ class PausingState {
 
     update(creature) {
         creature.incrementStateTimer();
-        creature.decelerate(0.9);
+        creature.decelerate(0.85);
+
+        // 速度足够小时直接归零，防止微速度导致的颤动
+        if (creature.getSpeed() < 0.05) {
+            creature.vx = 0;
+            creature.vy = 0;
+        }
 
         if (creature.isPauseDurationExceeded()) {
             return 'moving';
@@ -165,6 +178,7 @@ class ExitingState {
     constructor() {
         this.name = 'exiting';
         this._exitTarget = null;
+        this._exitAngle = 0;
     }
 
     update(creature) {
@@ -172,9 +186,11 @@ class ExitingState {
 
         const dx = this._exitTarget.x - creature.x;
         const dy = this._exitTarget.y - creature.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
-            creature.setVelocity(0, creature.speed * 1.5);
+        // 如果已经过了目标点或非常接近，直接朝边缘外方向加速
+        if (dist < 5) {
+            creature.setVelocity(this._exitAngle, creature.speed * 2);
         } else {
             creature.steerToward(this._exitTarget.x, this._exitTarget.y, creature.speed * 1.5);
         }
@@ -185,25 +201,25 @@ class ExitingState {
     enter(creature) {
         creature.setExiting();
 
-        const margin = 100;
-        const candidates = [
-            { x: -margin, y: creature.y },
-            { x: creature.canvasWidth + margin, y: creature.y },
-            { x: creature.x, y: -margin },
-            { x: creature.x, y: creature.canvasHeight + margin }
-        ];
+        // 计算从屏幕中心到生物位置的方向，生物应该朝远离中心的方向离开
+        const cx = creature.canvasWidth / 2;
+        const cy = creature.canvasHeight / 2;
+        this._exitAngle = Math.atan2(creature.y - cy, creature.x - cx);
 
-        let nearest = candidates[0];
-        let nearestDist = Infinity;
-        for (const c of candidates) {
-            const d = Math.sqrt((c.x - creature.x) ** 2 + (c.y - creature.y) ** 2);
-            if (d < nearestDist) {
-                nearestDist = d;
-                nearest = c;
-            }
+        // 如果生物在中心附近，随机选一个方向
+        if (Math.abs(creature.x - cx) < 50 && Math.abs(creature.y - cy) < 50) {
+            this._exitAngle = Math.random() * Math.PI * 2;
         }
 
-        this._exitTarget = nearest;
+        // 目标点设在屏幕外较远处，确保生物能走出去
+        const farMargin = 200;
+        this._exitTarget = {
+            x: cx + Math.cos(this._exitAngle) * (Math.max(creature.canvasWidth, creature.canvasHeight) + farMargin),
+            y: cy + Math.sin(this._exitAngle) * (Math.max(creature.canvasWidth, creature.canvasHeight) + farMargin)
+        };
+
+        // 立即设置朝目标方向的初速度
+        creature.setVelocity(this._exitAngle, creature.speed * 1.5);
     }
 
     exit() {}

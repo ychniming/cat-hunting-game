@@ -1,5 +1,4 @@
 const DEFAULT_CONFIG = {
-    gravity: 0.15,
     stiffness: 0.8,
     damping: 0.98,
     constraintIterations: 3,
@@ -12,7 +11,6 @@ class TailChain {
         if (segmentLength <= 0) throw new RangeError('segmentLength must be > 0');
 
         this._segmentLength = segmentLength;
-        this._gravity = config?.gravity ?? DEFAULT_CONFIG.gravity;
         this._stiffness = config?.stiffness ?? DEFAULT_CONFIG.stiffness;
         this._damping = config?.damping ?? DEFAULT_CONFIG.damping;
         this._constraintIterations = config?.constraintIterations ?? DEFAULT_CONFIG.constraintIterations;
@@ -32,12 +30,15 @@ class TailChain {
         this._segmentsCache = null;
     }
 
-    get gravity() { return this._gravity; }
     get stiffness() { return this._stiffness; }
     get damping() { return this._damping; }
     get segmentLength() { return this._segmentLength; }
 
     update(anchorX, anchorY) {
+        // 计算锚点帧间位移（即锚点速度）
+        const anchorDx = anchorX - this._points[0].x;
+        const anchorDy = anchorY - this._points[0].y;
+
         this._points[0].x = anchorX;
         this._points[0].y = anchorY;
         this._prevPoints[0].x = anchorX;
@@ -47,14 +48,25 @@ class TailChain {
             const curr = this._points[i];
             const prev = this._prevPoints[i];
 
-            const vx = (curr.x - prev.x) * this._damping;
-            const vy = (curr.y - prev.y) * this._damping;
+            // 段的实际速度（帧间位移）
+            const segVx = curr.x - prev.x;
+            const segVy = curr.y - prev.y;
+
+            const vx = segVx * this._damping;
+            const vy = segVy * this._damping;
 
             prev.x = curr.x;
             prev.y = curr.y;
 
-            curr.x += vx + this._forceX;
-            curr.y += vy + this._gravity + this._forceY;
+            // 速度匹配拖拽：让尾巴段速度趋向锚点速度
+            // 段慢于锚点时推向前，快于锚点时拉回后，自然防止过头
+            // dragFactor 随段索引递减，近端跟随紧、远端跟随松
+            const dragFactor = 0.2 / (1.0 + i * 0.5);
+            const dragForceX = (anchorDx - segVx) * dragFactor;
+            const dragForceY = (anchorDy - segVy) * dragFactor;
+
+            curr.x += vx + this._forceX + dragForceX;
+            curr.y += vy + this._forceY + dragForceY;
         }
 
         this._forceX = 0;
@@ -108,10 +120,6 @@ class TailChain {
 
     setStiffness(value) {
         this._stiffness = value;
-    }
-
-    setGravity(value) {
-        this._gravity = value;
     }
 }
 

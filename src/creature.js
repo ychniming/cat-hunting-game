@@ -31,7 +31,6 @@ class Creature {
         const segCount = CONFIG.game.tailSegments;
         const segLen = CONFIG.tail.segmentLength;
         this.tailChain = this.core.createTail(this.x, this.y, segCount, segLen, {
-            gravity: CONFIG.tail.gravity,
             stiffness: CONFIG.tail.stiffness,
             damping: CONFIG.tail.damping,
             constraintIterations: CONFIG.tail.constraintIterations

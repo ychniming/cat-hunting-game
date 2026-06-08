@@ -7,6 +7,11 @@ import { AnimationMode } from '../src/animation-mode.js';
 function createMockCreature(overrides = {}) {
     return {
         alive: true,
+        exiting: false,
+        x: 400,
+        y: 300,
+        lifeTimer: 0,
+        totalLife: 5400,
         _state: 'moving',
         isMoving: vi.fn(() => true),
         isPausing: vi.fn(() => false),
@@ -63,7 +68,7 @@ describe('AnimationMode', () => {
 
         it('spawns creature after delay', () => {
             animMode.start('infinite');
-            for (let i = 0; i < 70; i++) {
+            for (let i = 0; i < 190; i++) {
                 animMode.update();
             }
             expect(animMode.creature).not.toBeNull();

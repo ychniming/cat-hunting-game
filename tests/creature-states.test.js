@@ -13,7 +13,7 @@ function createMockCreature(overrides = {}) {
         totalLife: 600,
         exitDelay: 120,
         movePattern: 0,
-        wigglePhase: 0,
+        core: { wigglePhase: 0, wiggleSpeed: 0.1 },
         canvasWidth: 800,
         canvasHeight: 600,
         stateTimer: 0,
@@ -136,7 +136,7 @@ describe('CreatureStates', () => {
         });
 
         it('transitions to moving on timeout', () => {
-            creature.lifeTimer = 200;
+            creature.lifeTimer = 400;
             const transition = state.update(creature);
             expect(transition).toBe('moving');
         });
@@ -330,8 +330,8 @@ describe('CreatureStates', () => {
             const state = new PausingState();
             const creature = createMockCreature({ vx: 10, vy: 5, stateTimer: 0, lifeTimer: 0 });
             state.update(creature);
-            expect(creature.vx).toBeCloseTo(9);
-            expect(creature.vy).toBeCloseTo(4.5);
+            expect(creature.vx).toBeCloseTo(8.5);
+            expect(creature.vy).toBeCloseTo(4.25);
         });
 
         it('MovingState uses incrementPatternTimer instead of direct increment', () => {

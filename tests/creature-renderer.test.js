@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderCreature, renderTaperedTail } from '../src/creature-renderer.js';
+import { renderCreature, renderTail } from '../src/creature-renderer.js';
 
 function createMockCtx() {
     const calls = [];
@@ -100,11 +100,11 @@ describe('CreatureRenderer', () => {
             expect(lineCalls.length).toBeGreaterThanOrEqual(2);
         });
 
-        it('renders tail with tapered width using multiple strokes', () => {
+        it('renders tail with uniform width (cylindrical)', () => {
             const { ctx, calls } = createMockCtx();
             renderCreature(ctx, makeProps());
             const strokeCalls = calls.filter(c => c === 'stroke');
-            expect(strokeCalls.length).toBeGreaterThanOrEqual(2);
+            expect(strokeCalls.length).toBeGreaterThanOrEqual(1);
         });
 
         it('uses quadraticCurveTo for smooth tail curves', () => {
@@ -114,27 +114,26 @@ describe('CreatureRenderer', () => {
             expect(bezierCalls.length).toBeGreaterThanOrEqual(1);
         });
 
-        it('sets decreasing lineWidth for tail segments', () => {
+        it('sets uniform lineWidth for cylindrical tail', () => {
             const { ctx, calls } = createMockCtx();
             renderCreature(ctx, makeProps());
             const lineWidthSets = calls.filter(c => c.set === 'lineWidth');
-            expect(lineWidthSets.length).toBeGreaterThanOrEqual(2);
+            expect(lineWidthSets.length).toBeGreaterThanOrEqual(1);
             const widths = lineWidthSets.map(c => c.value);
-            const firstWidth = widths[0];
-            const lastWidth = widths[widths.length - 1];
-            expect(firstWidth).toBeGreaterThan(lastWidth);
+            const allSame = widths.every(w => w === widths[0]);
+            expect(allSame).toBe(true);
         });
     });
 
-    describe('renderTaperedTail', () => {
+    describe('renderTail', () => {
         it('does nothing with fewer than 2 segments', () => {
             const { ctx, calls } = createMockCtx();
-            renderTaperedTail(ctx, [{ x: 100, y: 100 }], 12, 1);
+            renderTail(ctx, [{ x: 100, y: 100 }], 12);
             const strokeCalls = calls.filter(c => c === 'stroke');
             expect(strokeCalls.length).toBe(0);
         });
 
-        it('draws each segment pair with decreasing width', () => {
+        it('draws with uniform width for all segments', () => {
             const { ctx, calls } = createMockCtx();
             const segments = [
                 { x: 100, y: 100 },
@@ -142,9 +141,11 @@ describe('CreatureRenderer', () => {
                 { x: 100, y: 120 },
                 { x: 100, y: 130 }
             ];
-            renderTaperedTail(ctx, segments, 12, 1);
+            renderTail(ctx, segments, 12);
             const lineWidthSets = calls.filter(c => c.set === 'lineWidth');
-            expect(lineWidthSets.length).toBeGreaterThanOrEqual(3);
+            expect(lineWidthSets.length).toBeGreaterThanOrEqual(1);
+            const widths = lineWidthSets.map(c => c.value);
+            expect(widths.every(w => w === 12)).toBe(true);
         });
 
         it('uses quadraticCurveTo for intermediate points', () => {
@@ -155,12 +156,12 @@ describe('CreatureRenderer', () => {
                 { x: 95, y: 120 },
                 { x: 100, y: 130 }
             ];
-            renderTaperedTail(ctx, segments, 12, 1);
+            renderTail(ctx, segments, 8);
             const quadCalls = calls.filter(c => c.method === 'quadraticCurveTo');
             expect(quadCalls.length).toBeGreaterThanOrEqual(1);
         });
 
-        it('base width is larger than tip width', () => {
+        it('strokes exactly once for the whole tail', () => {
             const { ctx, calls } = createMockCtx();
             const segments = [
                 { x: 100, y: 100 },
@@ -170,11 +171,9 @@ describe('CreatureRenderer', () => {
                 { x: 100, y: 132 },
                 { x: 100, y: 140 }
             ];
-            renderTaperedTail(ctx, segments, 12, 1);
-            const lineWidthSets = calls.filter(c => c.set === 'lineWidth');
-            const widths = lineWidthSets.map(c => c.value);
-            expect(widths[0]).toBeCloseTo(12, 0);
-            expect(widths[widths.length - 1]).toBeLessThan(widths[0]);
+            renderTail(ctx, segments, 10);
+            const strokeCalls = calls.filter(c => c === 'stroke');
+            expect(strokeCalls.length).toBe(1);
         });
     });
 });

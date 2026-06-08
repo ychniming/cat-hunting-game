@@ -4,7 +4,9 @@
   "description": "给猫咪玩的互动捕猎游戏",
   "main": "index.html",
   "scripts": {
-    "start": "python -m http.server 8080",
+    "start": "node start.js",
+    "start:prod": "node start.js --mode prod",
+    "start:check": "node start.js --check",
     "test": "vitest run --exclude e2e",
     "test:watch": "vitest --exclude e2e",
     "test:coverage": "vitest run --coverage --exclude e2e",

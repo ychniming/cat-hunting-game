@@ -10,17 +10,15 @@ const CONFIG = Object.freeze({
     tailSegments: 16
   }),
   animation: Object.freeze({
-    spawnDelay: 60,
+    spawnDelay: 120,
     tailSegments: 20
   }),
   tail: Object.freeze({
-    gravity: 0.15,
     stiffness: 0.8,
     damping: 0.98,
     constraintIterations: 3,
     segmentLength: 8,
     baseWidthRatio: 0.6,
-    tipWidth: 1,
     curlRadius: 4
   }),
   visual: Object.freeze({

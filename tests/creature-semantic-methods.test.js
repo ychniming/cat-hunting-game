@@ -337,38 +337,42 @@ describe('AnimationCreature semantic methods', () => {
     });
 
     describe('applyBoundaryForce', () => {
-        it('pushes right when x < margin', () => {
+        it('pushes right when x < margin (smooth quadratic)', () => {
             creature.x = 50;
             creature.vx = 0;
             creature.vy = 0;
             creature.applyBoundaryForce(100, 0.2);
-            expect(creature.vx).toBeCloseTo(0.2);
+            // ratio = 1 - 50/100 = 0.5, force = 0.2 * 0.5^2 = 0.05
+            expect(creature.vx).toBeCloseTo(0.05);
         });
 
-        it('pushes left when x > canvasWidth - margin', () => {
+        it('pushes left when x > canvasWidth - margin (smooth quadratic)', () => {
             creature.x = 750;
             creature.vx = 0;
             creature.vy = 0;
             creature.applyBoundaryForce(100, 0.2);
-            expect(creature.vx).toBeCloseTo(-0.2);
+            // ratio = 1 - (800-750)/100 = 0.5, force = 0.2 * 0.5^2 = 0.05
+            expect(creature.vx).toBeCloseTo(-0.05);
         });
 
-        it('pushes down when y < margin', () => {
+        it('pushes down when y < margin (smooth quadratic)', () => {
             creature.x = 400;
             creature.y = 50;
             creature.vx = 0;
             creature.vy = 0;
             creature.applyBoundaryForce(100, 0.2);
-            expect(creature.vy).toBeCloseTo(0.2);
+            // ratio = 1 - 50/100 = 0.5, force = 0.2 * 0.5^2 = 0.05
+            expect(creature.vy).toBeCloseTo(0.05);
         });
 
-        it('pushes up when y > canvasHeight - margin', () => {
+        it('pushes up when y > canvasHeight - margin (smooth quadratic)', () => {
             creature.x = 400;
             creature.y = 550;
             creature.vx = 0;
             creature.vy = 0;
             creature.applyBoundaryForce(100, 0.2);
-            expect(creature.vy).toBeCloseTo(-0.2);
+            // ratio = 1 - (600-550)/100 = 0.5, force = 0.2 * 0.5^2 = 0.05
+            expect(creature.vy).toBeCloseTo(-0.05);
         });
 
         it('no force when in center', () => {
@@ -379,6 +383,15 @@ describe('AnimationCreature semantic methods', () => {
             creature.applyBoundaryForce(100, 0.2);
             expect(creature.vx).toBeCloseTo(0);
             expect(creature.vy).toBeCloseTo(0);
+        });
+
+        it('maximum force at edge (x=0)', () => {
+            creature.x = 0;
+            creature.vx = 0;
+            creature.vy = 0;
+            creature.applyBoundaryForce(100, 0.2);
+            // ratio = 1 - 0/100 = 1.0, force = 0.2 * 1.0^2 = 0.2
+            expect(creature.vx).toBeCloseTo(0.2);
         });
     });
 

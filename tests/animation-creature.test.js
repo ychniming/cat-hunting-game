@@ -44,7 +44,7 @@ describe('AnimationCreature', () => {
 
     describe('state transitions', () => {
         it('transitions from entering to moving', () => {
-            creature.lifeTimer = 200;
+            creature.lifeTimer = 400;
             creature.update();
             expect(creature.state).toBe('moving');
         });
@@ -81,7 +81,7 @@ describe('AnimationCreature', () => {
         });
 
         it('updates position on transition frame', () => {
-            creature.lifeTimer = 200;
+            creature.lifeTimer = 400;
             creature.update();
             expect(creature.state).toBe('moving');
             expect(creature.tailSegments.length).toBe(20);
@@ -145,24 +145,17 @@ describe('AnimationCreature', () => {
     });
 
     describe('tail physics', () => {
-        it('adjusts gravity when pausing', () => {
+        it('uses normal stiffness when pausing', () => {
             transitionTo(creature, 'pausing');
             creature.update();
-            expect(creature.tailChain.gravity).toBeGreaterThan(0.15);
+            expect(creature.tailChain.stiffness).toBeCloseTo(0.8);
         });
 
-        it('adjusts stiffness when pausing', () => {
-            transitionTo(creature, 'pausing');
-            creature.update();
-            expect(creature.tailChain.stiffness).toBeLessThan(0.8);
-        });
-
-        it('restores default physics when moving', () => {
+        it('restores default stiffness when moving', () => {
             transitionTo(creature, 'pausing');
             creature.update();
             transitionTo(creature, 'moving');
             creature.update();
-            expect(creature.tailChain.gravity).toBeCloseTo(0.15);
             expect(creature.tailChain.stiffness).toBeCloseTo(0.8);
         });
     });

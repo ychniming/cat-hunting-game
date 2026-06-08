@@ -25,9 +25,9 @@ class AnimationCreature {
         this.vx = 0;
         this.vy = 0;
         this.stateTimer = 0;
-        this.pauseDuration = 120 + Math.random() * 180;
-        this.exitDelay = 120 + Math.random() * 180;
-        this.totalLife = 600 + Math.random() * 900;
+        this.pauseDuration = 90 + Math.random() * 60;
+        this.exitDelay = 180 + Math.random() * 300;
+        this.totalLife = 1800 + Math.random() * 3600;
         this.lifeTimer = 0;
 
         this.core.initSharedProperties({ minRadius: this.radius, maxRadius: this.radius, minWiggleSpeed: 0.08, maxWiggleSpeed: 0.14 });
@@ -35,7 +35,6 @@ class AnimationCreature {
         const segCount = CONFIG.animation.tailSegments;
         const segLen = CONFIG.tail.segmentLength;
         this.tailChain = this.core.createTail(this.x, this.y, segCount, segLen, {
-            gravity: CONFIG.tail.gravity,
             stiffness: CONFIG.tail.stiffness,
             damping: CONFIG.tail.damping,
             constraintIterations: CONFIG.tail.constraintIterations
@@ -46,7 +45,7 @@ class AnimationCreature {
 
         this.movePattern = Math.floor(Math.random() * 3);
         this.patternTimer = 0;
-        this.patternDuration = 100 + Math.random() * 200;
+        this.patternDuration = 300 + Math.random() * 420;
 
         this._currentState = new STATE_MAP.entering();
         this._currentState.enter(this);
@@ -68,10 +67,22 @@ class AnimationCreature {
     update() {
         if (!this.alive) return false;
 
+        // NaN/Infinity 安全检查
+        if (!isFinite(this.x)) this.x = this.canvasWidth / 2;
+        if (!isFinite(this.y)) this.y = this.canvasHeight / 2;
+        if (!isFinite(this.vx)) this.vx = 0;
+        if (!isFinite(this.vy)) this.vy = 0;
+
         this.core.wigglePhase += this.core.wiggleSpeed;
         this.core.updateBlink(8, 80, 330);
 
         this.lifeTimer++;
+
+        // 最大寿命强制死亡（防止永远不退出的情况）
+        if (this.lifeTimer > this.totalLife + 600) {
+            this.alive = false;
+            return false;
+        }
 
         const transition = this._currentState.update(this);
         if (transition && STATE_TRANSITIONS[this._currentState.name].includes(transition)) {
@@ -81,12 +92,42 @@ class AnimationCreature {
         this.x += this.vx;
         this.y += this.vy;
 
+        // 位置更新后 NaN 安全检查（防御性编程）
+        if (!isFinite(this.x)) this.x = this.canvasWidth / 2;
+        if (!isFinite(this.y)) this.y = this.canvasHeight / 2;
+
+        // 非退出状态下钳制位置，防止飘出屏幕
+        if (!this.exiting) {
+            const clampMargin = 50;
+            this.x = Math.max(-clampMargin, Math.min(this.canvasWidth + clampMargin, this.x));
+            this.y = Math.max(-clampMargin, Math.min(this.canvasHeight + clampMargin, this.y));
+        }
+
         this._updateTailPhysics();
 
-        const margin = 100;
-        if (this.exiting &&
-            (this.x < -margin || this.x > this.canvasWidth + margin ||
-             this.y < -margin || this.y > this.canvasHeight + margin)) {
+        // 退出状态：只有身体和尾巴末端都出了屏幕才判定死亡
+        if (this.exiting) {
+            const exitMargin = 100;
+            const bodyOutside = this.x < -exitMargin || this.x > this.canvasWidth + exitMargin ||
+                                this.y < -exitMargin || this.y > this.canvasHeight + exitMargin;
+            if (bodyOutside) {
+                // 检查尾巴末端是否也出了屏幕
+                const tailTipMargin = 20; // 尾巴末端只需稍微出屏即可
+                const segments = this.tailChain.getSegments();
+                const tailTip = segments[segments.length - 1];
+                const tailOutside = tailTip.x < -tailTipMargin || tailTip.x > this.canvasWidth + tailTipMargin ||
+                                    tailTip.y < -tailTipMargin || tailTip.y > this.canvasHeight + tailTipMargin;
+                if (tailOutside) {
+                    this.alive = false;
+                }
+            }
+        }
+
+        // 非退出状态下飘出屏幕过远，视为死亡以触发重生
+        const lostMargin = 300;
+        if (!this.exiting &&
+            (this.x < -lostMargin || this.x > this.canvasWidth + lostMargin ||
+             this.y < -lostMargin || this.y > this.canvasHeight + lostMargin)) {
             this.alive = false;
         }
 
@@ -94,14 +135,10 @@ class AnimationCreature {
     }
 
     _updateTailPhysics() {
-        if (this.state === 'pausing') {
-            this.tailChain.setGravity(CONFIG.tail.gravity * 2);
-            this.tailChain.setStiffness(CONFIG.tail.stiffness * 0.5);
-        } else if (this.state === 'exiting') {
-            this.tailChain.setGravity(CONFIG.tail.gravity * 0.5);
-            this.tailChain.setStiffness(CONFIG.tail.stiffness * 1.2);
+        if (this.state === 'exiting') {
+            // 退出时：增加刚度让尾巴紧跟身体
+            this.tailChain.setStiffness(CONFIG.tail.stiffness * 1.5);
         } else {
-            this.tailChain.setGravity(CONFIG.tail.gravity);
             this.tailChain.setStiffness(CONFIG.tail.stiffness);
         }
         this.tailChain.update(this.x, this.y);
@@ -150,12 +187,14 @@ class AnimationCreature {
     decelerate(factor) {
         this.vx *= factor;
         this.vy *= factor;
+        if (Math.abs(this.vx) < 0.01) this.vx = 0;
+        if (Math.abs(this.vy) < 0.01) this.vy = 0;
     }
 
     resetPattern() {
         this.patternTimer = 0;
         this.movePattern = Math.floor(Math.random() * 3);
-        this.patternDuration = 100 + Math.random() * 200;
+        this.patternDuration = 300 + Math.random() * 420;
         const angle = Math.random() * Math.PI * 2;
         this.vx = Math.cos(angle) * this.speed;
         this.vy = Math.sin(angle) * this.speed;
@@ -209,10 +248,23 @@ class AnimationCreature {
     }
 
     applyBoundaryForce(margin, force) {
-        if (this.x < margin) this.vx += force;
-        if (this.x > this.canvasWidth - margin) this.vx -= force;
-        if (this.y < margin) this.vy += force;
-        if (this.y > this.canvasHeight - margin) this.vy -= force;
+        // 平滑边界力：距离边界越近力越大，避免突变导致颤动
+        if (this.x < margin) {
+            const ratio = 1 - this.x / margin;
+            this.vx += force * ratio * ratio;
+        }
+        if (this.x > this.canvasWidth - margin) {
+            const ratio = 1 - (this.canvasWidth - this.x) / margin;
+            this.vx -= force * ratio * ratio;
+        }
+        if (this.y < margin) {
+            const ratio = 1 - this.y / margin;
+            this.vy += force * ratio * ratio;
+        }
+        if (this.y > this.canvasHeight - margin) {
+            const ratio = 1 - (this.canvasHeight - this.y) / margin;
+            this.vy -= force * ratio * ratio;
+        }
     }
 
     getSpeed() {

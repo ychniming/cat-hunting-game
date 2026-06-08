@@ -56,7 +56,7 @@ describe('CONFIG', () => {
 
   describe('animation group', () => {
     it('has spawnDelay', () => {
-      expect(CONFIG.animation.spawnDelay).toBe(60);
+      expect(CONFIG.animation.spawnDelay).toBe(120);
     });
 
     it('has tailSegments', () => {
@@ -65,10 +65,6 @@ describe('CONFIG', () => {
   });
 
   describe('tail group', () => {
-    it('has gravity', () => {
-      expect(CONFIG.tail.gravity).toBe(0.15);
-    });
-
     it('has stiffness', () => {
       expect(CONFIG.tail.stiffness).toBe(0.8);
     });
@@ -87,10 +83,6 @@ describe('CONFIG', () => {
 
     it('has baseWidthRatio', () => {
       expect(CONFIG.tail.baseWidthRatio).toBe(0.6);
-    });
-
-    it('has tipWidth', () => {
-      expect(CONFIG.tail.tipWidth).toBe(1);
     });
 
     it('has curlRadius', () => {

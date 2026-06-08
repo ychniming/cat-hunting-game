@@ -7,6 +7,7 @@ class AnimationMode {
         this.canvasHeight = canvasHeight;
         this.creature = null;
         this.spawnTimer = 0;
+        this.offScreenTimer = 0;
         this.duration = Infinity;
         this.startTime = 0;
         this.running = false;
@@ -20,6 +21,7 @@ class AnimationMode {
     start(durationKey) {
         this.creature = null;
         this.spawnTimer = 0;
+        this.offScreenTimer = 0;
         this.duration = this.durationOptions[durationKey] || Infinity;
         this.startTime = Date.now();
         this.running = true;
@@ -42,10 +44,26 @@ class AnimationMode {
 
         const soundEvents = [];
 
-        if (!this.creature || !this.creature.alive) {
+        // 检测生物是否离屏或无效（即使 alive=true）
+        const creatureLost = this.creature && this.creature.alive && this._isCreatureOffScreen(this.creature);
+
+        // 离屏计时器：生物在屏幕外时递增，在屏幕内时重置
+        if (this.creature && this.creature.alive && !this.creature.exiting &&
+            (this.creature.x < -200 || this.creature.x > this.canvasWidth + 200 ||
+             this.creature.y < -200 || this.creature.y > this.canvasHeight + 200)) {
+            this.offScreenTimer++;
+        } else if (this.creature && this.creature.alive && isFinite(this.creature.x) && isFinite(this.creature.y)) {
+            this.offScreenTimer = 0;
+        }
+
+        if (!this.creature || !this.creature.alive || creatureLost) {
+            if (creatureLost) {
+                this.creature.alive = false;
+            }
             this.spawnTimer++;
             if (this.spawnTimer >= CONFIG.animation.spawnDelay) {
                 this.spawnTimer = 0;
+                this.offScreenTimer = 0;
                 this.creature = new AnimationCreature(this.canvasWidth, this.canvasHeight);
                 soundEvents.push('startCrawl');
             }
@@ -69,6 +87,25 @@ class AnimationMode {
         }
 
         return { soundEvents, expired: false };
+    }
+
+    _isCreatureOffScreen(creature) {
+        const margin = 200;
+        const x = creature.x;
+        const y = creature.y;
+        // NaN 或 Infinity 检测
+        if (!isFinite(x) || !isFinite(y)) return true;
+        // 非退出状态下离屏过远
+        if (!creature.exiting &&
+            (x < -margin || x > this.canvasWidth + margin ||
+             y < -margin || y > this.canvasHeight + margin)) {
+            return this.offScreenTimer > 120; // 2秒容错
+        }
+        // 退出状态下超时未消失
+        if (creature.exiting && creature.lifeTimer > creature.totalLife + 600) {
+            return true;
+        }
+        return false;
     }
 
     getState() {

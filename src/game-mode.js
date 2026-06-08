@@ -69,8 +69,7 @@ class GameMode {
     update() {
         if (!this.running) return;
 
-        const elapsedMs = this._accumulatedMs + (performance.now() - this._startTimestamp);
-        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+        const elapsedSeconds = this.elapsedSeconds;
         this._time = Math.max(0, CONFIG.game.duration - elapsedSeconds);
 
         if (this._time <= 0) {
