@@ -254,9 +254,9 @@ function validateConfig(log) {
   ];
 
   const optionalFiles = [
-    { path: 'assets/frames', desc: '动画帧资源目录', isDir: true },
-    { path: 'sw.js', desc: 'Service Worker' },
-    { path: 'manifest.json', desc: 'PWA 清单' },
+    { path: 'dev-assets/assets/frames', desc: '动画帧资源目录', isDir: true },
+    { path: 'deploy/sw.js', desc: 'Service Worker' },
+    { path: 'deploy/manifest.json', desc: 'PWA 清单' },
   ];
 
   let hasError = false;
