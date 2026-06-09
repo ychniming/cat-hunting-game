@@ -13,8 +13,8 @@ class GameMode {
         this.combo = 0;
         this.maxCombo = 0;
         this.running = false;
-        this.spawnTimer = 0;
-        this.spawnInterval = CONFIG.game.spawnIntervalBase;
+        this._lastSpawnTime = 0;
+        this._spawnIntervalSec = CONFIG.game.spawnIntervalBaseSec;
         this._accumulatedMs = 0;
         this._startTimestamp = 0;
     }
@@ -38,7 +38,8 @@ class GameMode {
         this.creatures = [];
         this.particles = [];
         this.running = true;
-        this.spawnTimer = 0;
+        this._lastSpawnTime = 0;
+        this._spawnIntervalSec = CONFIG.game.spawnIntervalBaseSec;
         this._accumulatedMs = 0;
         this._startTimestamp = performance.now();
     }
@@ -78,13 +79,14 @@ class GameMode {
             return;
         }
 
-        this.spawnTimer++;
-        const currentInterval = Math.max(
-            CONFIG.game.spawnIntervalMin,
-            this.spawnInterval - Math.floor(elapsedSeconds / CONFIG.game.spawnAccelerationRateSec) * CONFIG.game.spawnAccelerationStep
+        const currentIntervalSec = Math.max(
+            CONFIG.game.spawnIntervalMinSec,
+            this._spawnIntervalSec - Math.floor(elapsedSeconds / CONFIG.game.spawnAccelerationRateSec) * CONFIG.game.spawnAccelerationStepSec
         );
-        if (this.spawnTimer >= currentInterval) {
-            this.spawnTimer = 0;
+
+        const timeSinceLastSpawn = elapsedSeconds - this._lastSpawnTime;
+        if (timeSinceLastSpawn >= currentIntervalSec) {
+            this._lastSpawnTime = elapsedSeconds;
             this.creatures.push(new Creature(this.canvasWidth, this.canvasHeight));
 
             if (elapsedSeconds >= CONFIG.game.doubleSpawnThresholdSec && Math.random() < CONFIG.game.doubleSpawnChance) {
@@ -157,8 +159,7 @@ class GameMode {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
         for (const creature of this.creatures) {
-            creature.canvasWidth = canvasWidth;
-            creature.canvasHeight = canvasHeight;
+            creature.resize(canvasWidth, canvasHeight);
         }
     }
 }

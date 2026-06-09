@@ -66,6 +66,22 @@ class CreatureCore {
             eyeOffset: this.eyeOffset
         };
     }
+
+    clampSpeed(vx, vy, maxSpeed) {
+        const speed = Math.sqrt(vx * vx + vy * vy);
+        if (speed > maxSpeed && speed > 0) {
+            return { vx: (vx / speed) * maxSpeed, vy: (vy / speed) * maxSpeed };
+        }
+        return { vx, vy };
+    }
+
+    getSpeed(vx, vy) {
+        return Math.sqrt(vx * vx + vy * vy);
+    }
+
+    addVelocityOffset(vx, vy, dvx, dvy) {
+        return { vx: vx + dvx, vy: vy + dvy };
+    }
 }
 
 export { CreatureCore };

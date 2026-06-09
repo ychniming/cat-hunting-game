@@ -8,11 +8,15 @@ async function forceGameOver(page) {
         const canvas = document.querySelector('#gameCanvas');
         const game = canvas?._gameInstance;
         if (game && game.gameMode) {
-            game.gameMode.time = 0;
+            // 强制游戏结束：设置内部时间状态使 time getter 返回 0
+            game.gameMode._accumulatedMs = 60 * 1000;
+            game.gameMode._startTimestamp = performance.now();
+            game.gameMode._time = 0;
             game.gameMode.running = false;
         }
     });
-    await page.waitForTimeout(500);
+    // 等待渲染循环检测到游戏结束并更新UI
+    await page.waitForTimeout(1000);
 }
 
 test.describe('游戏模式', () => {

@@ -276,4 +276,148 @@ describe('CreatureCore', () => {
             expect(props).not.toHaveProperty('eyeSizeRatio');
         });
     });
+
+    describe('clampSpeed', () => {
+        it('returns new object without modifying inputs', () => {
+            const core = new CreatureCore(800, 600);
+            const vx = 10;
+            const vy = 10;
+            const result = core.clampSpeed(vx, vy, 4);
+            expect(result).not.toBe(vx);
+            expect(result).toHaveProperty('vx');
+            expect(result).toHaveProperty('vy');
+            // Original values unchanged
+            expect(vx).toBe(10);
+            expect(vy).toBe(10);
+        });
+
+        it('clamps speed to maxSpeed when exceeded', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(10, 10, 4);
+            const speed = Math.sqrt(result.vx * result.vx + result.vy * result.vy);
+            expect(speed).toBeCloseTo(4);
+        });
+
+        it('preserves direction when clamping', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(3, 4, 2);
+            // Original direction: atan2(4, 3)
+            const origAngle = Math.atan2(4, 3);
+            const newAngle = Math.atan2(result.vy, result.vx);
+            expect(newAngle).toBeCloseTo(origAngle);
+        });
+
+        it('does not change speed when below maxSpeed', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(1, 1, 4);
+            expect(result.vx).toBe(1);
+            expect(result.vy).toBe(1);
+        });
+
+        it('does not change speed when equal to maxSpeed', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(3, 4, 5);
+            expect(result.vx).toBeCloseTo(3);
+            expect(result.vy).toBeCloseTo(4);
+        });
+
+        it('handles zero velocity', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(0, 0, 4);
+            expect(result.vx).toBe(0);
+            expect(result.vy).toBe(0);
+        });
+
+        it('does not produce NaN when speed is zero and maxSpeed is zero', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(0, 0, 0);
+            expect(Number.isFinite(result.vx)).toBe(true);
+            expect(Number.isFinite(result.vy)).toBe(true);
+        });
+
+        it('does not produce NaN when speed is zero and maxSpeed is negative', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(0, 0, -1);
+            expect(Number.isFinite(result.vx)).toBe(true);
+            expect(Number.isFinite(result.vy)).toBe(true);
+        });
+
+        it('does not produce NaN with very small velocity and zero maxSpeed', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(1e-16, 1e-16, 0);
+            expect(Number.isFinite(result.vx)).toBe(true);
+            expect(Number.isFinite(result.vy)).toBe(true);
+        });
+
+        it('handles negative velocity components', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.clampSpeed(-10, -10, 4);
+            const speed = Math.sqrt(result.vx * result.vx + result.vy * result.vy);
+            expect(speed).toBeCloseTo(4);
+            expect(result.vx).toBeLessThan(0);
+            expect(result.vy).toBeLessThan(0);
+        });
+    });
+
+    describe('getSpeed', () => {
+        it('returns correct speed for 3-4-5 triangle', () => {
+            const core = new CreatureCore(800, 600);
+            expect(core.getSpeed(3, 4)).toBeCloseTo(5);
+        });
+
+        it('returns 0 for zero velocity', () => {
+            const core = new CreatureCore(800, 600);
+            expect(core.getSpeed(0, 0)).toBe(0);
+        });
+
+        it('returns correct speed for single axis', () => {
+            const core = new CreatureCore(800, 600);
+            expect(core.getSpeed(7, 0)).toBeCloseTo(7);
+            expect(core.getSpeed(0, 7)).toBeCloseTo(7);
+        });
+
+        it('handles negative components correctly', () => {
+            const core = new CreatureCore(800, 600);
+            expect(core.getSpeed(-3, -4)).toBeCloseTo(5);
+        });
+    });
+
+    describe('addVelocityOffset', () => {
+        it('returns new object with offset added', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.addVelocityOffset(3, 4, 1, 2);
+            expect(result.vx).toBeCloseTo(4);
+            expect(result.vy).toBeCloseTo(6);
+        });
+
+        it('does not modify input values', () => {
+            const core = new CreatureCore(800, 600);
+            const vx = 5;
+            const vy = 5;
+            core.addVelocityOffset(vx, vy, 1, 1);
+            expect(vx).toBe(5);
+            expect(vy).toBe(5);
+        });
+
+        it('handles zero offset', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.addVelocityOffset(3, 4, 0, 0);
+            expect(result.vx).toBe(3);
+            expect(result.vy).toBe(4);
+        });
+
+        it('handles negative offsets', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.addVelocityOffset(5, 5, -2, -3);
+            expect(result.vx).toBe(3);
+            expect(result.vy).toBe(2);
+        });
+
+        it('handles zero base velocity', () => {
+            const core = new CreatureCore(800, 600);
+            const result = core.addVelocityOffset(0, 0, 3, 4);
+            expect(result.vx).toBe(3);
+            expect(result.vy).toBe(4);
+        });
+    });
 });

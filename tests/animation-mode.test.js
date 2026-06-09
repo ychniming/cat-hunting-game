@@ -218,5 +218,19 @@ describe('AnimationMode', () => {
             expect(animMode.canvasWidth).toBe(1024);
             expect(animMode.canvasHeight).toBe(768);
         });
+
+        it('uses creature.resize() semantic method when creature exists', () => {
+            animMode.start('infinite');
+            const creature = createMockCreature();
+            creature.resize = vi.fn();
+            animMode.creature = creature;
+            animMode.resize(1024, 768);
+            expect(creature.resize).toHaveBeenCalledWith(1024, 768);
+        });
+
+        it('does not call creature.resize() when creature is null', () => {
+            animMode.creature = null;
+            expect(() => animMode.resize(1024, 768)).not.toThrow();
+        });
     });
 });

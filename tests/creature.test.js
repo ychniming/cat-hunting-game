@@ -190,6 +190,28 @@ describe('Creature', () => {
         });
     });
 
+    describe('resize', () => {
+        it('updates canvasWidth and canvasHeight', () => {
+            creature.resize(1024, 768);
+            expect(creature.canvasWidth).toBe(1024);
+            expect(creature.canvasHeight).toBe(768);
+        });
+
+        it('updates core canvasWidth and canvasHeight', () => {
+            creature.resize(1024, 768);
+            expect(creature.core.canvasWidth).toBe(1024);
+            expect(creature.core.canvasHeight).toBe(768);
+        });
+
+        it('can be called multiple times with different values', () => {
+            creature.resize(1024, 768);
+            expect(creature.canvasWidth).toBe(1024);
+            creature.resize(500, 400);
+            expect(creature.canvasWidth).toBe(500);
+            expect(creature.canvasHeight).toBe(400);
+        });
+    });
+
     describe('tailSegments', () => {
         it('returns segments from tail chain', () => {
             const segs = creature.tailSegments;

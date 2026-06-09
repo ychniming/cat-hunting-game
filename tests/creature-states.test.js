@@ -107,6 +107,11 @@ function createMockCreature(overrides = {}) {
         return Math.sqrt(creature.vx * creature.vx + creature.vy * creature.vy);
     };
 
+    creature.stopVelocity = () => {
+        creature.vx = 0;
+        creature.vy = 0;
+    };
+
     creature.resetStateTimer = () => {
         creature.stateTimer = 0;
     };
@@ -275,6 +280,38 @@ describe('CreatureStates', () => {
             const transition = state.update(creature);
             expect(transition).toBeNull();
         });
+
+        it('uses stopVelocity when speed is below threshold', () => {
+            creature.vx = 0.03;
+            creature.vy = 0.02;
+            creature.stateTimer = 0;
+            creature.lifeTimer = 0;
+            let stopVelocityCalled = false;
+            const originalStopVelocity = creature.stopVelocity;
+            creature.stopVelocity = () => {
+                stopVelocityCalled = true;
+                originalStopVelocity.call(creature);
+            };
+            state.update(creature);
+            expect(stopVelocityCalled).toBe(true);
+            expect(creature.vx).toBe(0);
+            expect(creature.vy).toBe(0);
+        });
+
+        it('does not call stopVelocity when speed is above threshold', () => {
+            creature.vx = 1;
+            creature.vy = 0;
+            creature.stateTimer = 0;
+            creature.lifeTimer = 0;
+            let stopVelocityCalled = false;
+            const originalStopVelocity = creature.stopVelocity;
+            creature.stopVelocity = () => {
+                stopVelocityCalled = true;
+                originalStopVelocity.call(creature);
+            };
+            state.update(creature);
+            expect(stopVelocityCalled).toBe(false);
+        });
     });
 
     describe('ExitingState', () => {
@@ -332,6 +369,19 @@ describe('CreatureStates', () => {
             state.update(creature);
             expect(creature.vx).toBeCloseTo(8.5);
             expect(creature.vy).toBeCloseTo(4.25);
+        });
+
+        it('PausingState uses stopVelocity instead of direct vx/vy zeroing', () => {
+            const state = new PausingState();
+            const creature = createMockCreature({ vx: 0.03, vy: 0.02, stateTimer: 0, lifeTimer: 0 });
+            let stopVelocityCalled = false;
+            const originalStopVelocity = creature.stopVelocity;
+            creature.stopVelocity = () => {
+                stopVelocityCalled = true;
+                originalStopVelocity.call(creature);
+            };
+            state.update(creature);
+            expect(stopVelocityCalled).toBe(true);
         });
 
         it('MovingState uses incrementPatternTimer instead of direct increment', () => {

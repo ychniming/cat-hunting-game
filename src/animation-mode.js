@@ -121,8 +121,7 @@ class AnimationMode {
         this.canvasWidth = canvasWidth;
         this.canvasHeight = canvasHeight;
         if (this.creature) {
-            this.creature.canvasWidth = canvasWidth;
-            this.creature.canvasHeight = canvasHeight;
+            this.creature.resize(canvasWidth, canvasHeight);
         }
     }
 }

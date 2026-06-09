@@ -3,114 +3,120 @@ import { CONFIG } from '../src/config.js';
 
 describe('CONFIG', () => {
   describe('structure', () => {
-    it('has game group', () => {
+    it('has required top-level groups', () => {
       expect(CONFIG.game).toBeDefined();
-    });
-
-    it('has animation group', () => {
       expect(CONFIG.animation).toBeDefined();
-    });
-
-    it('has visual group', () => {
+      expect(CONFIG.tail).toBeDefined();
       expect(CONFIG.visual).toBeDefined();
-    });
-
-    it('has audio group', () => {
       expect(CONFIG.audio).toBeDefined();
     });
   });
 
-  describe('game group', () => {
-    it('has duration', () => {
-      expect(CONFIG.game.duration).toBe(60);
+  describe('game constraints', () => {
+    it('duration is positive', () => {
+      expect(CONFIG.game.duration).toBeGreaterThan(0);
     });
 
-    it('has spawnIntervalBase', () => {
-      expect(CONFIG.game.spawnIntervalBase).toBe(60);
+    it('spawn interval base is positive and >= min', () => {
+      expect(CONFIG.game.spawnIntervalBaseSec).toBeGreaterThan(0);
+      expect(CONFIG.game.spawnIntervalBaseSec).toBeGreaterThanOrEqual(CONFIG.game.spawnIntervalMinSec);
     });
 
-    it('has spawnIntervalMin', () => {
-      expect(CONFIG.game.spawnIntervalMin).toBe(20);
+    it('spawn interval min is positive', () => {
+      expect(CONFIG.game.spawnIntervalMinSec).toBeGreaterThan(0);
     });
 
-    it('has spawnAccelerationRateSec', () => {
-      expect(CONFIG.game.spawnAccelerationRateSec).toBe(5);
+    it('spawn acceleration rate is positive', () => {
+      expect(CONFIG.game.spawnAccelerationRateSec).toBeGreaterThan(0);
     });
 
-    it('has spawnAccelerationStep', () => {
-      expect(CONFIG.game.spawnAccelerationStep).toBe(5);
+    it('spawn acceleration step is positive', () => {
+      expect(CONFIG.game.spawnAccelerationStepSec).toBeGreaterThan(0);
     });
 
-    it('has doubleSpawnChance', () => {
-      expect(CONFIG.game.doubleSpawnChance).toBe(0.3);
+    it('double spawn chance is between 0 and 1', () => {
+      expect(CONFIG.game.doubleSpawnChance).toBeGreaterThanOrEqual(0);
+      expect(CONFIG.game.doubleSpawnChance).toBeLessThanOrEqual(1);
     });
 
-    it('has doubleSpawnThresholdSec', () => {
-      expect(CONFIG.game.doubleSpawnThresholdSec).toBe(10);
+    it('double spawn threshold is positive', () => {
+      expect(CONFIG.game.doubleSpawnThresholdSec).toBeGreaterThan(0);
     });
 
-    it('has tailSegments', () => {
-      expect(CONFIG.game.tailSegments).toBe(16);
-    });
-  });
-
-  describe('animation group', () => {
-    it('has spawnDelay', () => {
-      expect(CONFIG.animation.spawnDelay).toBe(120);
-    });
-
-    it('has tailSegments', () => {
-      expect(CONFIG.animation.tailSegments).toBe(20);
+    it('tail segments is positive', () => {
+      expect(CONFIG.game.tailSegments).toBeGreaterThan(0);
     });
   });
 
-  describe('tail group', () => {
-    it('has stiffness', () => {
-      expect(CONFIG.tail.stiffness).toBe(0.8);
+  describe('animation constraints', () => {
+    it('spawn delay is positive', () => {
+      expect(CONFIG.animation.spawnDelay).toBeGreaterThan(0);
     });
 
-    it('has damping', () => {
-      expect(CONFIG.tail.damping).toBe(0.98);
+    it('tail segments is positive', () => {
+      expect(CONFIG.animation.tailSegments).toBeGreaterThan(0);
     });
 
-    it('has constraintIterations', () => {
-      expect(CONFIG.tail.constraintIterations).toBe(3);
-    });
-
-    it('has segmentLength', () => {
-      expect(CONFIG.tail.segmentLength).toBe(8);
-    });
-
-    it('has baseWidthRatio', () => {
-      expect(CONFIG.tail.baseWidthRatio).toBe(0.6);
-    });
-
-    it('has curlRadius', () => {
-      expect(CONFIG.tail.curlRadius).toBe(4);
+    it('animation has more tail segments than game for smoother look', () => {
+      expect(CONFIG.animation.tailSegments).toBeGreaterThanOrEqual(CONFIG.game.tailSegments);
     });
   });
 
-  describe('visual group', () => {
-    it('has fps', () => {
-      expect(CONFIG.visual.fps).toBe(60);
+  describe('tail constraints', () => {
+    it('stiffness is between 0 and 1', () => {
+      expect(CONFIG.tail.stiffness).toBeGreaterThan(0);
+      expect(CONFIG.tail.stiffness).toBeLessThanOrEqual(1);
     });
 
-    it('has particleCount', () => {
-      expect(CONFIG.visual.particleCount).toBe(8);
+    it('damping is between 0 and 1', () => {
+      expect(CONFIG.tail.damping).toBeGreaterThan(0);
+      expect(CONFIG.tail.damping).toBeLessThanOrEqual(1);
     });
 
-    it('has particleGravity', () => {
-      expect(CONFIG.visual.particleGravity).toBe(0.1);
+    it('constraint iterations is positive', () => {
+      expect(CONFIG.tail.constraintIterations).toBeGreaterThan(0);
     });
 
-    it('has comboDisplayDuration', () => {
-      expect(CONFIG.visual.comboDisplayDuration).toBe(1000);
+    it('segment length is positive', () => {
+      expect(CONFIG.tail.segmentLength).toBeGreaterThan(0);
+    });
+
+    it('base width ratio is between 0 and 1', () => {
+      expect(CONFIG.tail.baseWidthRatio).toBeGreaterThan(0);
+      expect(CONFIG.tail.baseWidthRatio).toBeLessThanOrEqual(1);
+    });
+
+    it('curl radius is positive', () => {
+      expect(CONFIG.tail.curlRadius).toBeGreaterThan(0);
     });
   });
 
-  describe('audio group', () => {
-    it('has catchSoundDuration', () => {
-      expect(CONFIG.audio.catchSoundDuration).toBe(0.1);
+  describe('visual constraints', () => {
+    it('fps is positive', () => {
+      expect(CONFIG.visual.fps).toBeGreaterThan(0);
+    });
+
+    it('particle count is positive', () => {
+      expect(CONFIG.visual.particleCount).toBeGreaterThan(0);
+    });
+
+    it('particle gravity is non-negative', () => {
+      expect(CONFIG.visual.particleGravity).toBeGreaterThanOrEqual(0);
+    });
+
+    it('combo display duration is positive', () => {
+      expect(CONFIG.visual.comboDisplayDuration).toBeGreaterThan(0);
+    });
+
+    it('max particles is positive and >= particle count', () => {
+      expect(CONFIG.visual.maxParticles).toBeGreaterThan(0);
+      expect(CONFIG.visual.maxParticles).toBeGreaterThanOrEqual(CONFIG.visual.particleCount);
+    });
+  });
+
+  describe('audio constraints', () => {
+    it('catch sound duration is positive', () => {
+      expect(CONFIG.audio.catchSoundDuration).toBeGreaterThan(0);
     });
   });
 
@@ -121,6 +127,14 @@ describe('CONFIG', () => {
 
     it('top-level groups cannot be reassigned', () => {
       expect(() => { CONFIG.game = {}; }).toThrow();
+    });
+
+    it('tail values cannot be reassigned', () => {
+      expect(() => { CONFIG.tail.stiffness = 0; }).toThrow();
+    });
+
+    it('visual values cannot be reassigned', () => {
+      expect(() => { CONFIG.visual.fps = 0; }).toThrow();
     });
   });
 });

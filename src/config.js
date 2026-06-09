@@ -1,10 +1,10 @@
 const CONFIG = Object.freeze({
   game: Object.freeze({
     duration: 60,
-    spawnIntervalBase: 60,
-    spawnIntervalMin: 20,
+    spawnIntervalBaseSec: 1.0,
+    spawnIntervalMinSec: 0.33,
     spawnAccelerationRateSec: 5,
-    spawnAccelerationStep: 5,
+    spawnAccelerationStepSec: 0.08,
     doubleSpawnChance: 0.3,
     doubleSpawnThresholdSec: 10,
     tailSegments: 16

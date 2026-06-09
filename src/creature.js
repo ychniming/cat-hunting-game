@@ -65,21 +65,29 @@ class Creature {
 
     // --- Semantic action methods ---
 
+    resize(canvasWidth, canvasHeight) {
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+        this.core.canvasWidth = canvasWidth;
+        this.core.canvasHeight = canvasHeight;
+    }
+
     addWiggleOffset() {
-        this.vx += Math.sin(this.core.wigglePhase * 2) * 0.05;
-        this.vy += Math.cos(this.core.wigglePhase * 1.5) * 0.05;
+        const dvx = Math.sin(this.core.wigglePhase * 2) * 0.05;
+        const dvy = Math.cos(this.core.wigglePhase * 1.5) * 0.05;
+        const result = this.core.addVelocityOffset(this.vx, this.vy, dvx, dvy);
+        this.vx = result.vx;
+        this.vy = result.vy;
     }
 
     clampSpeed(maxSpeed) {
-        const speed = this.getSpeed();
-        if (speed > maxSpeed) {
-            this.vx = (this.vx / speed) * maxSpeed;
-            this.vy = (this.vy / speed) * maxSpeed;
-        }
+        const result = this.core.clampSpeed(this.vx, this.vy, maxSpeed);
+        this.vx = result.vx;
+        this.vy = result.vy;
     }
 
     getSpeed() {
-        return Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        return this.core.getSpeed(this.vx, this.vy);
     }
 
     incrementCaughtTime() {

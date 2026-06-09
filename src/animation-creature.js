@@ -67,12 +67,6 @@ class AnimationCreature {
     update() {
         if (!this.alive) return false;
 
-        // NaN/Infinity 安全检查
-        if (!isFinite(this.x)) this.x = this.canvasWidth / 2;
-        if (!isFinite(this.y)) this.y = this.canvasHeight / 2;
-        if (!isFinite(this.vx)) this.vx = 0;
-        if (!isFinite(this.vy)) this.vy = 0;
-
         this.core.wigglePhase += this.core.wiggleSpeed;
         this.core.updateBlink(8, 80, 330);
 
@@ -91,10 +85,6 @@ class AnimationCreature {
 
         this.x += this.vx;
         this.y += this.vy;
-
-        // 位置更新后 NaN 安全检查（防御性编程）
-        if (!isFinite(this.x)) this.x = this.canvasWidth / 2;
-        if (!isFinite(this.y)) this.y = this.canvasHeight / 2;
 
         // 非退出状态下钳制位置，防止飘出屏幕
         if (!this.exiting) {
@@ -171,6 +161,13 @@ class AnimationCreature {
 
     // --- Semantic action methods for state classes ---
 
+    resize(canvasWidth, canvasHeight) {
+        this.canvasWidth = canvasWidth;
+        this.canvasHeight = canvasHeight;
+        this.core.canvasWidth = canvasWidth;
+        this.core.canvasHeight = canvasHeight;
+    }
+
     steerToward(targetX, targetY, speed) {
         const dx = targetX - this.x;
         const dy = targetY - this.y;
@@ -189,6 +186,11 @@ class AnimationCreature {
         this.vy *= factor;
         if (Math.abs(this.vx) < 0.01) this.vx = 0;
         if (Math.abs(this.vy) < 0.01) this.vy = 0;
+    }
+
+    stopVelocity() {
+        this.vx = 0;
+        this.vy = 0;
     }
 
     resetPattern() {
@@ -235,16 +237,15 @@ class AnimationCreature {
     }
 
     addVelocityOffset(dvx, dvy) {
-        this.vx += dvx;
-        this.vy += dvy;
+        const result = this.core.addVelocityOffset(this.vx, this.vy, dvx, dvy);
+        this.vx = result.vx;
+        this.vy = result.vy;
     }
 
     clampSpeed(maxSpeed) {
-        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-        if (speed > maxSpeed) {
-            this.vx = (this.vx / speed) * maxSpeed;
-            this.vy = (this.vy / speed) * maxSpeed;
-        }
+        const result = this.core.clampSpeed(this.vx, this.vy, maxSpeed);
+        this.vx = result.vx;
+        this.vy = result.vy;
     }
 
     applyBoundaryForce(margin, force) {
@@ -268,7 +269,7 @@ class AnimationCreature {
     }
 
     getSpeed() {
-        return Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        return this.core.getSpeed(this.vx, this.vy);
     }
 
     resetStateTimer() {

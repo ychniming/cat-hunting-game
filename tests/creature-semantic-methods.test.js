@@ -415,6 +415,39 @@ describe('AnimationCreature semantic methods', () => {
         });
     });
 
+    describe('stopVelocity', () => {
+        it('sets vx and vy to 0', () => {
+            creature.vx = 3;
+            creature.vy = 4;
+            creature.stopVelocity();
+            expect(creature.vx).toBe(0);
+            expect(creature.vy).toBe(0);
+        });
+
+        it('sets velocity to 0 when already zero', () => {
+            creature.vx = 0;
+            creature.vy = 0;
+            creature.stopVelocity();
+            expect(creature.vx).toBe(0);
+            expect(creature.vy).toBe(0);
+        });
+
+        it('sets velocity to 0 for negative values', () => {
+            creature.vx = -2.5;
+            creature.vy = -1.3;
+            creature.stopVelocity();
+            expect(creature.vx).toBe(0);
+            expect(creature.vy).toBe(0);
+        });
+
+        it('results in getSpeed returning 0', () => {
+            creature.vx = 5;
+            creature.vy = 12;
+            creature.stopVelocity();
+            expect(creature.getSpeed()).toBe(0);
+        });
+    });
+
     describe('resetStateTimer', () => {
         it('resets stateTimer to 0', () => {
             creature.stateTimer = 100;

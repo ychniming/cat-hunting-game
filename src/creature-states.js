@@ -152,8 +152,7 @@ class PausingState {
 
         // 速度足够小时直接归零，防止微速度导致的颤动
         if (creature.getSpeed() < 0.05) {
-            creature.vx = 0;
-            creature.vy = 0;
+            creature.stopVelocity();
         }
 
         if (creature.isPauseDurationExceeded()) {

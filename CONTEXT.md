@@ -9,8 +9,8 @@
 
 | 术语 | 定义 | 使用场景 |
 |------|------|---------|
-| **生物核心** (CreatureCore) | 共享的生物基础逻辑：边缘生成、眨眼更新、尾巴创建、视觉属性 | Creature 和 AnimationCreature 的组合模块 |
-| **语义方法** (Semantic Method) | 生物上的动作方法（steerToward, decelerate, addWiggleOffset, clampSpeed等），外部通过这些方法间接操作生物 | Creature 和 AnimationCreature 共享的接口模式 |
+| **生物核心** (CreatureCore) | 深模块：共享的生物基础逻辑 + 物理工具方法（clampSpeed, getSpeed, addVelocityOffset），边缘生成、眨眼更新、尾巴创建、视觉属性 | Creature 和 AnimationCreature 的组合模块，物理方法遵循不可变模式 |
+| **语义方法** (Semantic Method) | 生物上的动作方法（steerToward, decelerate, addWiggleOffset, clampSpeed, resize, stopVelocity等），外部通过这些方法间接操作生物 | Creature 和 AnimationCreature 共享的接口模式 |
 | **生物** (Creature) | 黑色圆形头部、白色大眼睛、带摆动尾巴的蝌蚪状生物 | 游戏模式和动画模式的核心元素 |
 | **游戏模式** (Game Mode) | 60秒计时挑战，点击捕捉生物获得分数 | 给猫咪或人玩的互动模式 |
 | **动画模式** (Animation Mode) | 无限循环播放生物移动，无交互纯观赏 | 给猫咪看的电视动画 |
@@ -71,12 +71,12 @@
 ├── src/                # ES模块源码
 │   ├── main.js         # 入口，实例化Game
 │   ├── game.js         # 游戏主循环与模式切换
-│   ├── config.js       # 配置常量
-│   ├── game-mode.js    # 游戏模式逻辑（真实时间计时）
+│   ├── config.js       # 配置常量（时间属性以Sec后缀表示秒数）
+│   ├── game-mode.js    # 游戏模式逻辑（真实时间计时+生成节奏）
 │   ├── animation-mode.js # 动画模式逻辑
-│   ├── creature.js     # 游戏模式生物（含语义方法）
-│   ├── animation-creature.js # 动画模式生物（含语义方法+状态机）
-│   ├── creature-core.js # 生物核心共享逻辑（组合模块）
+│   ├── creature.js     # 游戏模式生物（含语义方法+resize）
+│   ├── animation-creature.js # 动画模式生物（含语义方法+resize+stopVelocity+状态机）
+│   ├── creature-core.js # 生物核心深模块（共享逻辑+不可变物理工具方法）
 │   ├── creature-states.js # 动画生物状态机定义
 │   ├── creature-renderer.js # 生物渲染函数
 │   ├── tail-chain.js   # Verlet 积分尾巴物理链

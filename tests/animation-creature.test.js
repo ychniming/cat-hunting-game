@@ -144,6 +144,59 @@ describe('AnimationCreature', () => {
         });
     });
 
+    describe('resize', () => {
+        it('updates canvasWidth and canvasHeight', () => {
+            creature.resize(1024, 768);
+            expect(creature.canvasWidth).toBe(1024);
+            expect(creature.canvasHeight).toBe(768);
+        });
+
+        it('updates core canvasWidth and canvasHeight', () => {
+            creature.resize(1024, 768);
+            expect(creature.core.canvasWidth).toBe(1024);
+            expect(creature.core.canvasHeight).toBe(768);
+        });
+
+        it('can be called multiple times with different values', () => {
+            creature.resize(1024, 768);
+            expect(creature.canvasWidth).toBe(1024);
+            creature.resize(500, 400);
+            expect(creature.canvasWidth).toBe(500);
+            expect(creature.canvasHeight).toBe(400);
+        });
+    });
+
+    describe('update produces finite values without isFinite guards', () => {
+        it('x and y remain finite after many updates from entering state', () => {
+            for (let i = 0; i < 500; i++) {
+                creature.update();
+                if (!creature.alive) break;
+                expect(Number.isFinite(creature.x)).toBe(true);
+                expect(Number.isFinite(creature.y)).toBe(true);
+                expect(Number.isFinite(creature.vx)).toBe(true);
+                expect(Number.isFinite(creature.vy)).toBe(true);
+            }
+        });
+
+        it('vx and vy remain finite when decelerating to zero', () => {
+            transitionTo(creature, 'pausing');
+            for (let i = 0; i < 200; i++) {
+                creature.update();
+                if (!creature.alive) break;
+                expect(Number.isFinite(creature.vx)).toBe(true);
+                expect(Number.isFinite(creature.vy)).toBe(true);
+            }
+        });
+
+        it('clampSpeed with zero velocity does not produce NaN', () => {
+            creature.vx = 0;
+            creature.vy = 0;
+            creature.clampSpeed(creature.speed);
+            expect(Number.isFinite(creature.vx)).toBe(true);
+            expect(Number.isFinite(creature.vy)).toBe(true);
+        });
+    });
+
     describe('tail physics', () => {
         it('uses normal stiffness when pausing', () => {
             transitionTo(creature, 'pausing');
