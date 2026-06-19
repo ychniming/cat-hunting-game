@@ -22,6 +22,9 @@
 | **锥形渲染** (Tapered Rendering) | 从根部到尖端线宽递减的绘制方式 | 尾巴视觉呈现 |
 | **速度匹配拖拽** (Velocity-Matched Drag) | 尾巴段速度趋向锚点速度的力，慢则推、快则拉 | 让尾巴自然跟随头部移动 |
 | **状态感知物理** (State-Aware Physics) | 尾巴物理参数随生物状态动态调整 | 退出时增加刚度让尾巴紧跟身体 |
+| **焦点导航** (Focus Navigation) | 遥控器方向键在菜单按钮间移动焦点的导航方式 | Android TV 遥控器、键盘方向键导航菜单 |
+| **焦点组** (Focus Group) | 同一屏幕内可聚焦元素的有序集合，方向键在组内线性移动 | 每个菜单屏幕对应一个焦点组 |
+| **焦点指示器** (Focus Indicator) | 当前焦点元素的视觉反馈（橙色高亮边框 #ff6b35） | 遥控器导航时标识当前选中按钮 |
 
 ## 领域边界
 
@@ -49,6 +52,7 @@
 7. **生物核心组合** - Creature 和 AnimationCreature 通过 CreatureCore 组合共享逻辑
 8. **语义方法接口** - 状态类和内部逻辑通过语义方法操作生物，不直接访问内部字段
 9. **声音事件映射** - 未知声音事件触发 console.warn，便于调试
+10. **声明式焦点导航** - 遥控器/键盘方向键导航菜单，声明式焦点组，边界不动，默认首按钮
 
 ### 待迭代决策
 1. 生物停留时间随机范围（当前：5-15秒）
@@ -82,7 +86,8 @@
 │   ├── tail-chain.js   # Verlet 积分尾巴物理链
 │   ├── particle.js     # 粒子效果
 │   ├── sound-manager.js # 音频管理（守卫集中）
-│   ├── input-handler.js # 输入处理
+│   ├── input-handler.js # 输入处理（Canvas鼠标/触摸）
+│   ├── focus-navigator.js # 焦点导航（遥控器/键盘方向键）
 │   └── ui-controller.js # UI控制
 ├── tests/              # 测试文件
 ├── manifest.json       # PWA配置

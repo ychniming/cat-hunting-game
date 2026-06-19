@@ -107,13 +107,13 @@
         .btn {
             background: #333;
             color: white;
-            border: none;
+            border: 3px solid transparent;
             padding: 15px 40px;
             font-size: 22px;
             border-radius: 50px;
             cursor: pointer;
             pointer-events: all;
-            transition: transform 0.2s;
+            transition: transform 0.2s, border-color 100ms ease;
             margin: 8px;
             min-width: 220px;
         }
@@ -124,6 +124,10 @@
 
         .btn:active {
             transform: scale(0.95);
+        }
+
+        .btn.focused {
+            border-color: #ff6b35 !important;
         }
 
         .btn-secondary {

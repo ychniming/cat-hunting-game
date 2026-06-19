@@ -4,6 +4,7 @@ import { AnimationMode } from './animation-mode.js';
 import { SoundManager } from './sound-manager.js';
 import { UIController } from './ui-controller.js';
 import { InputHandler } from './input-handler.js';
+import { FocusNavigator } from './focus-navigator.js';
 import { renderCreature } from './creature-renderer.js';
 
 class Game {
@@ -16,7 +17,11 @@ class Game {
         this.gameMode = new GameMode(this.canvas.width, this.canvas.height);
         this.animationMode = new AnimationMode(this.canvas.width, this.canvas.height);
         this.soundManager = new SoundManager();
-        this.ui = new UIController();
+
+        this.focusNavigator = new FocusNavigator(() => this._handleBack());
+        this._registerFocusGroups();
+
+        this.ui = new UIController((screenName) => this._onScreenChange(screenName));
         this.inputHandler = new InputHandler(this.canvas, (x, y) => this.handleInput(x, y));
 
         this._soundEventMap = {
@@ -52,6 +57,9 @@ class Game {
         this._rafId = null;
         this.loop = this.loop.bind(this);
         this._rafId = requestAnimationFrame(this.loop);
+
+        // Activate initial focus group for the start screen
+        this.focusNavigator.activateGroup('menu');
     }
 
     resize() {
@@ -98,6 +106,37 @@ class Game {
 
     showAnimationSettings() {
         this.ui.showScreen('animationSettings');
+    }
+
+    _registerFocusGroups() {
+        const queryBtns = (id) => {
+            const el = document.getElementById(id);
+            return (el && el.querySelectorAll) ? Array.from(el.querySelectorAll('.btn')) : [];
+        };
+
+        this.focusNavigator.registerGroup('menu', queryBtns('startScreen'));
+        this.focusNavigator.registerGroup('animationSettings', queryBtns('animationScreen'));
+        this.focusNavigator.registerGroup('gameOver', queryBtns('gameOverScreen'));
+    }
+
+    _onScreenChange(screenName) {
+        this._currentScreen = screenName;
+        if (screenName === 'game' || screenName === 'animation') {
+            this.focusNavigator.clearFocus();
+        } else {
+            this.focusNavigator.activateGroup(screenName);
+        }
+    }
+
+    _handleBack() {
+        if (this.mode === 'game') {
+            this.showMenu();
+        } else if (this.mode === 'animation') {
+            this.showMenu();
+        } else if (this._currentScreen === 'animationSettings') {
+            this.showMenu();
+        }
+        // menu screen: do nothing
     }
 
     handleInput(x, y) {
@@ -190,6 +229,7 @@ class Game {
         window.removeEventListener('resize', this._handleResize);
         document.removeEventListener('click', this._handleAction);
         this.inputHandler.destroy();
+        this.focusNavigator.destroy();
         if (this._comboTimeout) {
             clearTimeout(this._comboTimeout);
             this._comboTimeout = null;

@@ -158,13 +158,18 @@ vi.mock('../src/sound-manager.js', () => {
 
 vi.mock('../src/ui-controller.js', () => {
     class MockUIController {
-        constructor() {
-            this.showScreen = vi.fn();
+        constructor(onScreenChange) {
+            this._onScreenChange = onScreenChange;
+            this.showScreen = vi.fn((name) => {
+                if (this._onScreenChange) this._onScreenChange(name);
+            });
             this.showCombo = vi.fn();
             this.hideCombo = vi.fn();
             this.updateScore = vi.fn();
             this.updateTimer = vi.fn();
-            this.showGameOver = vi.fn();
+            this.showGameOver = vi.fn((score, maxCombo) => {
+                this.showScreen('gameOver');
+            });
         }
     }
     return { UIController: MockUIController };
@@ -177,6 +182,19 @@ vi.mock('../src/input-handler.js', () => {
         }
     }
     return { InputHandler: MockInputHandler };
+});
+
+vi.mock('../src/focus-navigator.js', () => {
+    class MockFocusNavigator {
+        constructor() {
+            this.registerGroup = vi.fn();
+            this.activateGroup = vi.fn();
+            this.clearFocus = vi.fn();
+            this.handleKeyDown = vi.fn();
+            this.destroy = vi.fn();
+        }
+    }
+    return { FocusNavigator: MockFocusNavigator };
 });
 
 vi.mock('../src/creature-renderer.js', () => ({
@@ -755,6 +773,64 @@ describe('Game', () => {
             game.resize();
             expect(game.gameMode.resize).toHaveBeenCalled();
             expect(game.animationMode.resize).toHaveBeenCalled();
+        });
+    });
+
+    // ---- Focus Navigation Integration ----
+
+    describe('focus navigation integration', () => {
+        beforeEach(() => {
+            game = new Game();
+        });
+
+        it('creates FocusNavigator and registers focus groups', () => {
+            expect(game.focusNavigator).toBeDefined();
+            expect(game.focusNavigator.registerGroup).toHaveBeenCalledWith('menu', expect.any(Array));
+            expect(game.focusNavigator.registerGroup).toHaveBeenCalledWith('animationSettings', expect.any(Array));
+            expect(game.focusNavigator.registerGroup).toHaveBeenCalledWith('gameOver', expect.any(Array));
+        });
+
+        it('activates menu focus group on showMenu', () => {
+            game.showMenu();
+            expect(game.focusNavigator.activateGroup).toHaveBeenCalledWith('menu');
+        });
+
+        it('clears focus when entering game mode', () => {
+            game.startGameMode();
+            expect(game.focusNavigator.clearFocus).toHaveBeenCalled();
+        });
+
+        it('clears focus when entering animation mode', () => {
+            game.startAnimationMode('30min');
+            expect(game.focusNavigator.clearFocus).toHaveBeenCalled();
+        });
+
+        it('activates animationSettings group on showAnimationSettings', () => {
+            game.showAnimationSettings();
+            expect(game.focusNavigator.activateGroup).toHaveBeenCalledWith('animationSettings');
+        });
+
+        it('activates gameOver group on showGameOver', () => {
+            game.ui.showGameOver(100, 5);
+            expect(game.focusNavigator.activateGroup).toHaveBeenCalledWith('gameOver');
+        });
+
+        it('back handler returns to menu from game mode', () => {
+            game.mode = 'game';
+            game._handleBack();
+            expect(game.mode).toBe('menu');
+        });
+
+        it('back handler does nothing from menu mode', () => {
+            game.mode = 'menu';
+            const modeBefore = game.mode;
+            game._handleBack();
+            expect(game.mode).toBe(modeBefore);
+        });
+
+        it('destroy calls focusNavigator.destroy', () => {
+            game.destroy();
+            expect(game.focusNavigator.destroy).toHaveBeenCalled();
         });
     });
 });

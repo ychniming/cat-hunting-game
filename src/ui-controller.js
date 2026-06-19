@@ -1,5 +1,6 @@
 class UIController {
-    constructor() {
+    constructor(onScreenChange) {
+        this._onScreenChange = onScreenChange;
         this.elements = {
             startScreen: document.getElementById('startScreen'),
             gameOverScreen: document.getElementById('gameOverScreen'),
@@ -59,6 +60,8 @@ class UIController {
                 this._safeSetDisplay('gameOverScreen', 'flex');
                 break;
         }
+
+        if (this._onScreenChange) this._onScreenChange(name);
     }
 
     updateScore(score) {
