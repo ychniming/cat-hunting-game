@@ -37,22 +37,28 @@ class SoundManager {
         }
     }
 
-    _ensureContext() {
+    async _ensureContext() {
         if (!this.audioCtx) this.init();
         if (!this.audioCtx) return false;
         if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
+            try {
+                await this.audioCtx.resume();
+            } catch (e) {
+                console.warn('SoundManager: AudioContext resume failed, audio disabled.', e.message);
+                return false;
+            }
         }
         return true;
     }
 
-    startBackgroundMusic() {
-        if (!this._ensureContext()) return;
+    async startBackgroundMusic() {
+        this._bgMusicGeneration = (this._bgMusicGeneration || 0) + 1;
+        const generation = this._bgMusicGeneration;
+        if (!(await this._ensureContext())) return;
+        if (this._bgMusicGeneration !== generation) return;
         if (this.isPlaying) return;
 
         this.isPlaying = true;
-        this._bgMusicGeneration = (this._bgMusicGeneration || 0) + 1;
-        const generation = this._bgMusicGeneration;
         this.bgMusicGain.gain.cancelScheduledValues(this.audioCtx.currentTime);
         this.bgMusicGain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
         const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 349.23, 329.63, 293.66];
@@ -96,6 +102,7 @@ class SoundManager {
 
     stopBackgroundMusic() {
         this.isPlaying = false;
+        this._bgMusicGeneration = (this._bgMusicGeneration || 0) + 1;
         if (this._bgMusicTimeout) {
             clearTimeout(this._bgMusicTimeout);
             this._bgMusicTimeout = null;
@@ -105,8 +112,11 @@ class SoundManager {
         }
     }
 
-    startCrawlSound() {
-        if (!this._ensureContext()) return;
+    async startCrawlSound() {
+        this._crawlGeneration = (this._crawlGeneration || 0) + 1;
+        const generation = this._crawlGeneration;
+        if (!(await this._ensureContext())) return;
+        if (this._crawlGeneration !== generation) return;
         if (this.crawlNoise) return;
 
         const bufferSize = this.audioCtx.sampleRate * 2;
@@ -136,6 +146,7 @@ class SoundManager {
     }
 
     stopCrawlSound() {
+        this._crawlGeneration = (this._crawlGeneration || 0) + 1;
         if (this.crawlNoise) {
             try {
                 this.crawlNoise.stop();
@@ -154,8 +165,8 @@ class SoundManager {
         }
     }
 
-    playPauseSound() {
-        if (!this._ensureContext()) return;
+    async playPauseSound() {
+        if (!(await this._ensureContext())) return;
 
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
@@ -186,8 +197,8 @@ class SoundManager {
         }
     }
 
-    playCatchSound(combo) {
-        if (!this._ensureContext()) return;
+    async playCatchSound(combo) {
+        if (!(await this._ensureContext())) return;
 
         const clampedCombo = Math.min(combo, 10);
         const startFreq = 600 + clampedCombo * 80;

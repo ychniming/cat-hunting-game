@@ -49,7 +49,7 @@ function createMockAudioContext() {
             connect: vi.fn(),
             disconnect: vi.fn()
         })),
-        resume: vi.fn(),
+        resume: vi.fn(() => Promise.resolve()),
         close: vi.fn(() => Promise.resolve())
     };
 }
@@ -108,59 +108,59 @@ describe('SoundManager', () => {
     });
 
     describe('startBackgroundMusic', () => {
-        it('sets isPlaying to true', () => {
-            manager.startBackgroundMusic();
+        it('sets isPlaying to true', async () => {
+            await manager.startBackgroundMusic();
             expect(manager.isPlaying).toBe(true);
         });
 
-        it('resumes suspended context', () => {
+        it('resumes suspended context', async () => {
             mockCtx.state = 'suspended';
-            manager.startBackgroundMusic();
+            await manager.startBackgroundMusic();
             expect(mockCtx.resume).toHaveBeenCalled();
         });
 
-        it('does not start again if already playing', () => {
-            manager.startBackgroundMusic();
+        it('does not start again if already playing', async () => {
+            await manager.startBackgroundMusic();
             const oscCount = mockCtx.createOscillator.mock.calls.length;
-            manager.startBackgroundMusic();
+            await manager.startBackgroundMusic();
             expect(mockCtx.createOscillator.mock.calls.length).toBe(oscCount);
         });
     });
 
     describe('stopBackgroundMusic', () => {
-        it('sets isPlaying to false', () => {
-            manager.startBackgroundMusic();
+        it('sets isPlaying to false', async () => {
+            await manager.startBackgroundMusic();
             manager.stopBackgroundMusic();
             expect(manager.isPlaying).toBe(false);
         });
     });
 
     describe('startCrawlSound', () => {
-        it('creates crawl noise source', () => {
-            manager.startCrawlSound();
+        it('creates crawl noise source', async () => {
+            await manager.startCrawlSound();
             expect(manager.crawlNoise).toBeTruthy();
             expect(mockCtx.createBufferSource).toHaveBeenCalled();
         });
 
-        it('does not create duplicate crawl sound', () => {
-            manager.startCrawlSound();
+        it('does not create duplicate crawl sound', async () => {
+            await manager.startCrawlSound();
             const callCount = mockCtx.createBufferSource.mock.calls.length;
-            manager.startCrawlSound();
+            await manager.startCrawlSound();
             expect(mockCtx.createBufferSource.mock.calls.length).toBe(callCount);
         });
     });
 
     describe('stopCrawlSound', () => {
-        it('stops and clears crawl noise', () => {
-            manager.startCrawlSound();
+        it('stops and clears crawl noise', async () => {
+            await manager.startCrawlSound();
             const noise = manager.crawlNoise;
             manager.stopCrawlSound();
             expect(noise.stop).toHaveBeenCalled();
             expect(manager.crawlNoise).toBeNull();
         });
 
-        it('disconnects crawl filter', () => {
-            manager.startCrawlSound();
+        it('disconnects crawl filter', async () => {
+            await manager.startCrawlSound();
             const filter = manager.crawlFilter;
             manager.stopCrawlSound();
             expect(filter.disconnect).toHaveBeenCalled();
@@ -169,15 +169,15 @@ describe('SoundManager', () => {
     });
 
     describe('playPauseSound', () => {
-        it('creates oscillator for pause sound', () => {
-            manager.playPauseSound();
+        it('creates oscillator for pause sound', async () => {
+            await manager.playPauseSound();
             expect(mockCtx.createOscillator).toHaveBeenCalled();
         });
     });
 
     describe('playCatchSound', () => {
-        it('creates oscillator with combo-based frequency', () => {
-            manager.playCatchSound(5);
+        it('creates oscillator with combo-based frequency', async () => {
+            await manager.playCatchSound(5);
             expect(mockCtx.createOscillator).toHaveBeenCalled();
         });
     });
@@ -198,9 +198,9 @@ describe('SoundManager', () => {
     });
 
     describe('stopAll', () => {
-        it('stops both background music and crawl sound', () => {
-            manager.startBackgroundMusic();
-            manager.startCrawlSound();
+        it('stops both background music and crawl sound', async () => {
+            await manager.startBackgroundMusic();
+            await manager.startCrawlSound();
             manager.stopAll();
             expect(manager.isPlaying).toBe(false);
             expect(manager.crawlNoise).toBeNull();
@@ -291,14 +291,14 @@ describe('SoundManager', () => {
     });
 
     describe('oscillator onended cleanup', () => {
-        it('sets onended handler on background music oscillator', () => {
-            manager.startBackgroundMusic();
+        it('sets onended handler on background music oscillator', async () => {
+            await manager.startBackgroundMusic();
             const osc = mockCtx.createOscillator.mock.results[0].value;
             expect(osc.onended).toBeInstanceOf(Function);
         });
 
-        it('onended disconnects both osc and gain for background music', () => {
-            manager.startBackgroundMusic();
+        it('onended disconnects both osc and gain for background music', async () => {
+            await manager.startBackgroundMusic();
             const osc = mockCtx.createOscillator.mock.results[0].value;
             const noteGainIdx = mockCtx.createGain.mock.results.length - 1;
             const gain = mockCtx.createGain.mock.results[noteGainIdx].value;
@@ -307,9 +307,9 @@ describe('SoundManager', () => {
             expect(gain.disconnect).toHaveBeenCalled();
         });
 
-        it('onended disconnects both osc and gain for pause sound', () => {
+        it('onended disconnects both osc and gain for pause sound', async () => {
             manager.init();
-            manager.playPauseSound();
+            await manager.playPauseSound();
             const lastOscIdx = mockCtx.createOscillator.mock.results.length - 1;
             const osc = mockCtx.createOscillator.mock.results[lastOscIdx].value;
             const lastGainIdx = mockCtx.createGain.mock.results.length - 1;
@@ -319,9 +319,9 @@ describe('SoundManager', () => {
             expect(gain.disconnect).toHaveBeenCalled();
         });
 
-        it('onended disconnects both osc and gain for catch sound', () => {
+        it('onended disconnects both osc and gain for catch sound', async () => {
             manager.init();
-            manager.playCatchSound(3);
+            await manager.playCatchSound(3);
             const lastOscIdx = mockCtx.createOscillator.mock.results.length - 1;
             const osc = mockCtx.createOscillator.mock.results[lastOscIdx].value;
             const lastGainIdx = mockCtx.createGain.mock.results.length - 1;
@@ -337,83 +337,98 @@ describe('SoundManager', () => {
             expect(typeof manager._ensureContext).toBe('function');
         });
 
-        it('calls init when audioCtx is null', () => {
+        it('calls init when audioCtx is null', async () => {
             const initSpy = vi.spyOn(manager, 'init');
-            manager._ensureContext();
+            await manager._ensureContext();
             expect(initSpy).toHaveBeenCalled();
             initSpy.mockRestore();
         });
 
-        it('does not call init when audioCtx already exists', () => {
+        it('does not call init when audioCtx already exists', async () => {
             manager.init();
             const initSpy = vi.spyOn(manager, 'init');
-            manager._ensureContext();
+            await manager._ensureContext();
             expect(initSpy).not.toHaveBeenCalled();
             initSpy.mockRestore();
         });
 
-        it('returns false when audioCtx creation fails', () => {
+        it('returns false when audioCtx creation fails', async () => {
             globalThis.window = {
                 AudioContext: function() { throw new Error('not supported'); }
             };
-            const result = manager._ensureContext();
+            const result = await manager._ensureContext();
             expect(result).toBe(false);
         });
 
-        it('returns true when audioCtx exists after init', () => {
-            const result = manager._ensureContext();
+        it('returns true when audioCtx exists after init', async () => {
+            const result = await manager._ensureContext();
             expect(result).toBe(true);
         });
 
-        it('resumes suspended context', () => {
+        it('resumes suspended context', async () => {
             manager.init();
             mockCtx.state = 'suspended';
-            manager._ensureContext();
+            await manager._ensureContext();
             expect(mockCtx.resume).toHaveBeenCalled();
         });
 
-        it('does not resume running context', () => {
+        it('does not resume running context', async () => {
             manager.init();
             mockCtx.state = 'running';
-            manager._ensureContext();
+            await manager._ensureContext();
             expect(mockCtx.resume).not.toHaveBeenCalled();
+        });
+
+        it('returns false when resume fails', async () => {
+            manager.init();
+            mockCtx.state = 'suspended';
+            mockCtx.resume = vi.fn(() => Promise.reject(new Error('not allowed')));
+            const result = await manager._ensureContext();
+            expect(result).toBe(false);
+        });
+
+        it('does not throw when resume fails', async () => {
+            manager.init();
+            mockCtx.state = 'suspended';
+            mockCtx.resume = vi.fn(() => Promise.reject(new Error('not allowed')));
+            await expect(manager._ensureContext()).resolves.not.toThrow();
         });
     });
 
     describe('public methods use _ensureContext', () => {
-        it('startBackgroundMusic calls _ensureContext', () => {
+        it('startBackgroundMusic calls _ensureContext', async () => {
             const spy = vi.spyOn(manager, '_ensureContext');
-            manager.startBackgroundMusic();
+            await manager.startBackgroundMusic();
             expect(spy).toHaveBeenCalled();
             spy.mockRestore();
         });
 
-        it('startCrawlSound calls _ensureContext', () => {
+        it('startCrawlSound calls _ensureContext', async () => {
             const spy = vi.spyOn(manager, '_ensureContext');
-            manager.startCrawlSound();
+            await manager.startCrawlSound();
             expect(spy).toHaveBeenCalled();
             spy.mockRestore();
         });
 
-        it('playPauseSound calls _ensureContext', () => {
+        it('playPauseSound calls _ensureContext', async () => {
             const spy = vi.spyOn(manager, '_ensureContext');
-            manager.playPauseSound();
+            await manager.playPauseSound();
             expect(spy).toHaveBeenCalled();
             spy.mockRestore();
         });
 
-        it('playCatchSound calls _ensureContext', () => {
+        it('playCatchSound calls _ensureContext', async () => {
             const spy = vi.spyOn(manager, '_ensureContext');
-            manager.playCatchSound(1);
+            await manager.playCatchSound(1);
             expect(spy).toHaveBeenCalled();
             spy.mockRestore();
         });
     });
 
     describe('destroy no double disconnect', () => {
-        it('does not disconnect crawlFilter after stopAll already cleaned it', () => {
+        it('does not disconnect crawlFilter after stopAll already cleaned it', async () => {
             manager.init();
-            manager.startCrawlSound();
+            await manager.startCrawlSound();
             const filter = manager.crawlFilter;
             const filterDisconnectSpy = vi.spyOn(filter, 'disconnect');
             manager.destroy();
@@ -422,9 +437,9 @@ describe('SoundManager', () => {
             filterDisconnectSpy.mockRestore();
         });
 
-        it('crawlFilter is null after destroy', () => {
+        it('crawlFilter is null after destroy', async () => {
             manager.init();
-            manager.startCrawlSound();
+            await manager.startCrawlSound();
             manager.destroy();
             expect(manager.crawlFilter).toBeNull();
         });
@@ -449,13 +464,11 @@ describe('SoundManager', () => {
             expect(() => manager.playCatchSound(5)).not.toThrow();
         });
 
-        it('rapid start/stop/start cycle does not crash', () => {
-            expect(() => {
-                manager.startCrawlSound();
-                manager.stopCrawlSound();
-                manager.startCrawlSound();
-                manager.stopCrawlSound();
-            }).not.toThrow();
+        it('rapid start/stop/start cycle does not crash', async () => {
+            await manager.startCrawlSound();
+            manager.stopCrawlSound();
+            await manager.startCrawlSound();
+            manager.stopCrawlSound();
         });
     });
 });

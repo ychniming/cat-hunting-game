@@ -7,3 +7,13 @@ logs/
 Thumbs.db
 *.log
 src/runtime-config.js
+
+# Android / Cordova build artifacts
+android-sdk/
+gradle/
+*.apk
+*.keystore
+release-signing.properties
+
+# Cordova project (built outside source tree)
+cordova-app/

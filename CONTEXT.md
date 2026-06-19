@@ -25,6 +25,8 @@
 | **焦点导航** (Focus Navigation) | 遥控器方向键在菜单按钮间移动焦点的导航方式 | Android TV 遥控器、键盘方向键导航菜单 |
 | **焦点组** (Focus Group) | 同一屏幕内可聚焦元素的有序集合，方向键在组内线性移动 | 每个菜单屏幕对应一个焦点组 |
 | **焦点指示器** (Focus Indicator) | 当前焦点元素的视觉反馈（橙色高亮边框 #ff6b35） | 遥控器导航时标识当前选中按钮 |
+| **Cordova 构建** (Cordova Build) | 使用 Apache Cordova 将 Web 应用打包为 Android APK 的流程 | 独立于源码树的构建目录，通过 cordova prepare 注入 www 资源 |
+| **签名密钥** (Signing Key) | Android APK 发布签名的 RSA 2048-bit 密钥对 | 存储在 .keystore 文件中，已加入 .gitignore |
 
 ## 领域边界
 
@@ -53,6 +55,7 @@
 8. **语义方法接口** - 状态类和内部逻辑通过语义方法操作生物，不直接访问内部字段
 9. **声音事件映射** - 未知声音事件触发 console.warn，便于调试
 10. **声明式焦点导航** - 遥控器/键盘方向键导航菜单，声明式焦点组，边界不动，默认首按钮
+11. **Cordova 独立构建目录** - Android 构建项目放在源码树外（C:\Users\...\cat-game-build），避免中文路径和构建产物污染源码
 
 ### 待迭代决策
 1. 生物停留时间随机范围（当前：5-15秒）
@@ -90,11 +93,12 @@
 │   ├── focus-navigator.js # 焦点导航（遥控器/键盘方向键）
 │   └── ui-controller.js # UI控制
 ├── tests/              # 测试文件
-├── manifest.json       # PWA配置
-├── sw.js               # Service Worker
 ├── package.json        # 项目元数据
 ├── cordova-setup.ps1   # Android打包脚本
 ├── extract_frames.py   # 视频帧提取工具
+├── deploy/             # 部署配置
+│   ├── manifest.json   # PWA配置
+│   └── sw.js           # Service Worker
 ├── assets/             # 素材目录
 │   └── frames/         # 视频关键帧
 ├── docs/               # 文档目录
