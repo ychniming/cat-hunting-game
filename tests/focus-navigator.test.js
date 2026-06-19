@@ -192,9 +192,26 @@ describe('FocusNavigator', () => {
             navigator.registerGroup('menu', [elements.btn1, elements.btn2]);
             navigator.activateGroup('menu');
             navigator.destroy();
+            // After destroy, focus is cleared and no group is active
+            expect(elements.btn1.classList.contains('focused')).toBe(false);
+            // Subsequent key events are ignored (no crash, no focus change)
             navigator.handleKeyDown(createKeyEvent('ArrowDown'));
-            // btn1 still focused (no change after destroy)
+            expect(elements.btn2.classList.contains('focused')).toBe(false);
+        });
+
+        it('destroy clears focused CSS class from active element', () => {
+            navigator.registerGroup('menu', [elements.btn1, elements.btn2]);
+            navigator.activateGroup('menu');
             expect(elements.btn1.classList.contains('focused')).toBe(true);
+            navigator.destroy();
+            expect(elements.btn1.classList.contains('focused')).toBe(false);
+        });
+
+        it('destroy is idempotent - double call does not throw', () => {
+            navigator.registerGroup('menu', [elements.btn1]);
+            navigator.activateGroup('menu');
+            navigator.destroy();
+            expect(() => navigator.destroy()).not.toThrow();
         });
 
         it('clearFocus removes focus from current element', () => {

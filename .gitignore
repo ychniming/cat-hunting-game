@@ -1,7 +1,9 @@
 node_modules/
 coverage/
 test-results/
+playwright-report/
 logs/
 .DS_Store
 Thumbs.db
 *.log
+src/runtime-config.js

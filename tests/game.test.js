@@ -412,6 +412,12 @@ describe('Game', () => {
             game.destroy();
             expect(() => game.destroy()).not.toThrow();
         });
+
+        it('clears canvas._gameInstance on destroy', () => {
+            expect(game.canvas._gameInstance).toBe(game);
+            game.destroy();
+            expect(game.canvas._gameInstance).toBeNull();
+        });
     });
 
     // ---- handleInput general behavior ----
@@ -817,6 +823,7 @@ describe('Game', () => {
 
         it('back handler returns to menu from game mode', () => {
             game.mode = 'game';
+            game._currentScreen = 'game';
             game._handleBack();
             expect(game.mode).toBe('menu');
         });
@@ -826,6 +833,20 @@ describe('Game', () => {
             const modeBefore = game.mode;
             game._handleBack();
             expect(game.mode).toBe(modeBefore);
+        });
+
+        it('back handler returns to menu from gameOver screen', () => {
+            game.mode = 'gameOver';
+            game._currentScreen = 'gameOver';
+            game._handleBack();
+            expect(game.mode).toBe('menu');
+        });
+
+        it('back handler returns to menu from animationSettings screen', () => {
+            game.mode = 'menu';
+            game._currentScreen = 'animationSettings';
+            game._handleBack();
+            expect(game.mode).toBe('menu');
         });
 
         it('destroy calls focusNavigator.destroy', () => {

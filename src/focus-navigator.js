@@ -83,9 +83,12 @@ class FocusNavigator {
     }
 
     destroy() {
+        if (this._destroyed) return;
+        this.clearFocus();
         this._destroyed = true;
         if (this._eventTarget) {
             this._eventTarget.removeEventListener('keydown', this._keyHandler);
+            this._eventTarget = null;
         }
     }
 }

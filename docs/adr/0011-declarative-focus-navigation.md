@@ -53,6 +53,16 @@ When the game or animation Canvas is active, `FocusNavigator.clearFocus()` is ca
 
 Only handles `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Enter`, `Escape`, `Backspace`. Cordova Android TV maps remote buttons to these standard keys.
 
+### Back navigation: unified screen-based check
+
+`_handleBack()` uses `this._currentScreen !== 'menu'` to determine if back navigation should return to menu. This covers all non-menu screens (game, animation, animationSettings, gameOver) uniformly, avoiding per-screen conditionals that are easy to forget when adding new screens.
+
+### Resource cleanup
+
+- `FocusNavigator.destroy()` calls `clearFocus()` before setting `_destroyed` flag, ensuring no `focused` CSS class remains on elements. It is idempotent (safe to call twice).
+- `Game.destroy()` clears `canvas._gameInstance = null` to prevent DOM-to-JS reference leaks.
+- `_currentScreen` is initialized to `'menu'` in the constructor, ensuring `_handleBack()` always has a valid screen to check.
+
 ## Consequences
 
 - **Positive**: Zero-dependency, lightweight (~80 lines) navigation module

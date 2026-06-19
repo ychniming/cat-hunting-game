@@ -13,6 +13,7 @@ class Game {
         this.canvas._gameInstance = this;
         this.ctx = this.canvas.getContext('2d');
         this.mode = 'menu';
+        this._currentScreen = 'menu';
 
         this.gameMode = new GameMode(this.canvas.width, this.canvas.height);
         this.animationMode = new AnimationMode(this.canvas.width, this.canvas.height);
@@ -129,14 +130,9 @@ class Game {
     }
 
     _handleBack() {
-        if (this.mode === 'game') {
-            this.showMenu();
-        } else if (this.mode === 'animation') {
-            this.showMenu();
-        } else if (this._currentScreen === 'animationSettings') {
+        if (this._currentScreen !== 'menu') {
             this.showMenu();
         }
-        // menu screen: do nothing
     }
 
     handleInput(x, y) {
@@ -237,6 +233,7 @@ class Game {
         this.soundManager.destroy();
         this.gameMode.stop();
         this.animationMode.stop();
+        this.canvas._gameInstance = null;
     }
 }
 
