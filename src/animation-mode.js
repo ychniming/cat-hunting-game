@@ -47,15 +47,6 @@ class AnimationMode {
         // 检测生物是否离屏或无效（即使 alive=true）
         const creatureLost = this.creature && this.creature.alive && this._isCreatureOffScreen(this.creature);
 
-        // 离屏计时器：生物在屏幕外时递增，在屏幕内时重置
-        if (this.creature && this.creature.alive && !this.creature.exiting &&
-            (this.creature.x < -200 || this.creature.x > this.canvasWidth + 200 ||
-             this.creature.y < -200 || this.creature.y > this.canvasHeight + 200)) {
-            this.offScreenTimer++;
-        } else if (this.creature && this.creature.alive && isFinite(this.creature.x) && isFinite(this.creature.y)) {
-            this.offScreenTimer = 0;
-        }
-
         if (!this.creature || !this.creature.alive || creatureLost) {
             if (creatureLost) {
                 this.creature.alive = false;
@@ -89,22 +80,32 @@ class AnimationMode {
         return { soundEvents, expired: false };
     }
 
+    /**
+     * 检测生物是否离屏。副作用：会修改 this.offScreenTimer。
+     * 每帧最多调用一次。
+     */
     _isCreatureOffScreen(creature) {
         const margin = 200;
         const x = creature.x;
         const y = creature.y;
         // NaN 或 Infinity 检测
         if (!isFinite(x) || !isFinite(y)) return true;
-        // 非退出状态下离屏过远
-        if (!creature.exiting &&
+
+        const isOffScreen = !creature.exiting &&
             (x < -margin || x > this.canvasWidth + margin ||
-             y < -margin || y > this.canvasHeight + margin)) {
-            return this.offScreenTimer > 120; // 2秒容错
+             y < -margin || y > this.canvasHeight + margin);
+
+        // 离屏计时器：生物在屏幕外时递增，在屏幕内时重置
+        if (isOffScreen) {
+            this.offScreenTimer++;
+        } else if (isFinite(x) && isFinite(y)) {
+            this.offScreenTimer = 0;
         }
+
+        // 非退出状态下离屏过久
+        if (isOffScreen && this.offScreenTimer > 120) return true;
         // 退出状态下超时未消失
-        if (creature.exiting && creature.lifeTimer > creature.totalLife + 600) {
-            return true;
-        }
+        if (creature.exiting && creature.lifeTimer > creature.totalLife + 600) return true;
         return false;
     }
 

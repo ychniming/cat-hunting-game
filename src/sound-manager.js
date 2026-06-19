@@ -51,6 +51,8 @@ class SoundManager {
         if (this.isPlaying) return;
 
         this.isPlaying = true;
+        this._bgMusicGeneration = (this._bgMusicGeneration || 0) + 1;
+        const generation = this._bgMusicGeneration;
         this.bgMusicGain.gain.cancelScheduledValues(this.audioCtx.currentTime);
         this.bgMusicGain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
         const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 349.23, 329.63, 293.66];
@@ -58,7 +60,7 @@ class SoundManager {
 
         let noteIndex = 0;
         const playNextNote = () => {
-            if (!this.isPlaying) return;
+            if (!this.isPlaying || this._bgMusicGeneration !== generation) return;
 
             const freq = notes[noteIndex % notes.length];
             const duration = durations[noteIndex % durations.length];
