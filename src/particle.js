@@ -20,11 +20,13 @@ class Particle {
     }
 
     draw(ctx) {
+        const alpha = Math.max(0, this.life);
+        const scale = Math.max(0, this.life);
         ctx.save();
-        ctx.globalAlpha = this.life;
+        ctx.globalAlpha = alpha;
         ctx.fillStyle = '#ff6b35';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.size * scale, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }

@@ -100,8 +100,8 @@ vi.mock('../src/config.js', () => ({
     CONFIG: {
         game: { duration: 60, spawnIntervalBaseSec: 1.0, spawnIntervalMinSec: 0.33, spawnAccelerationRateSec: 5, spawnAccelerationStepSec: 0.08, doubleSpawnChance: 0.3, doubleSpawnThresholdSec: 10, tailSegments: 16 },
         animation: { spawnDelay: 60, tailSegments: 20 },
-        tail: { stiffness: 0.8, damping: 0.98, constraintIterations: 3, segmentLength: 8, baseWidthRatio: 0.6, tipWidth: 1, curlRadius: 4 },
-        visual: { fps: 60, particleCount: 8, particleGravity: 0.1, comboDisplayDuration: 1000, maxParticles: 200 },
+        tail: { stiffness: 0.8, damping: 0.98, constraintIterations: 3, segmentLength: 8, baseWidthRatio: 0.6 },
+        visual: { particleCount: 8, particleGravity: 0.1, comboDisplayDuration: 1000, maxParticles: 200 },
         audio: { catchSoundDuration: 0.1 }
     }
 }));

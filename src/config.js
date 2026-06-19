@@ -18,11 +18,9 @@ const CONFIG = Object.freeze({
     damping: 0.98,
     constraintIterations: 3,
     segmentLength: 8,
-    baseWidthRatio: 0.6,
-    curlRadius: 4
+    baseWidthRatio: 0.6
   }),
   visual: Object.freeze({
-    fps: 60,
     particleCount: 8,
     particleGravity: 0.1,
     comboDisplayDuration: 1000,

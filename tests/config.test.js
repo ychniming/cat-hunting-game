@@ -85,17 +85,9 @@ describe('CONFIG', () => {
       expect(CONFIG.tail.baseWidthRatio).toBeGreaterThan(0);
       expect(CONFIG.tail.baseWidthRatio).toBeLessThanOrEqual(1);
     });
-
-    it('curl radius is positive', () => {
-      expect(CONFIG.tail.curlRadius).toBeGreaterThan(0);
-    });
   });
 
   describe('visual constraints', () => {
-    it('fps is positive', () => {
-      expect(CONFIG.visual.fps).toBeGreaterThan(0);
-    });
-
     it('particle count is positive', () => {
       expect(CONFIG.visual.particleCount).toBeGreaterThan(0);
     });
@@ -131,10 +123,6 @@ describe('CONFIG', () => {
 
     it('tail values cannot be reassigned', () => {
       expect(() => { CONFIG.tail.stiffness = 0; }).toThrow();
-    });
-
-    it('visual values cannot be reassigned', () => {
-      expect(() => { CONFIG.visual.fps = 0; }).toThrow();
     });
   });
 });
