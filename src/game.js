@@ -8,7 +8,8 @@ import { FocusNavigator } from './focus-navigator.js';
 import { renderCreature } from './creature-renderer.js';
 
 class Game {
-    constructor() {
+    constructor(config = CONFIG) {
+        this.config = config;
         this.canvas = document.getElementById('gameCanvas');
         this.canvas._gameInstance = this;
         this.ctx = this.canvas.getContext('2d');
@@ -76,7 +77,7 @@ class Game {
         this.soundManager.stopAll();
         this.ui.showScreen('game');
         this.ui.updateScore(0);
-        this.ui.updateTimer(CONFIG.game.duration);
+        this.ui.updateTimer(this.config.game.duration);
     }
 
     startAnimationMode(duration) {
@@ -145,7 +146,7 @@ class Game {
             this.soundManager.playCatchSound(result.combo);
 
             if (this._comboTimeout) clearTimeout(this._comboTimeout);
-            this._comboTimeout = setTimeout(() => this.ui.hideCombo(), CONFIG.visual.comboDisplayDuration);
+            this._comboTimeout = setTimeout(() => this.ui.hideCombo(), this.config.visual.comboDisplayDuration);
         } else {
             this.ui.hideCombo();
             if (this._comboTimeout) clearTimeout(this._comboTimeout);

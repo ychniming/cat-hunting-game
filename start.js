@@ -620,11 +620,9 @@ function injectRuntimeConfig(log, mode, port) {
   const runtimeOverrides = {};
 
   if (mode === 'prod') {
-    runtimeOverrides.fps = 60;
     runtimeOverrides.particleCount = 6;
     runtimeOverrides.maxParticles = 150;
   } else if (mode === 'dev') {
-    runtimeOverrides.fps = 60;
     runtimeOverrides.particleCount = 8;
     runtimeOverrides.maxParticles = 200;
   }

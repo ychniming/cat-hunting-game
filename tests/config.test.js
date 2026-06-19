@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CONFIG } from '../src/config.js';
+import { CONFIG, createConfig } from '../src/config.js';
 
 describe('CONFIG', () => {
   describe('structure', () => {
@@ -123,6 +123,36 @@ describe('CONFIG', () => {
 
     it('tail values cannot be reassigned', () => {
       expect(() => { CONFIG.tail.stiffness = 0; }).toThrow();
+    });
+  });
+
+  describe('createConfig', () => {
+    it('returns default CONFIG when no overrides', () => {
+      const config = createConfig();
+      expect(config.game.duration).toBe(CONFIG.game.duration);
+      expect(config.visual.particleCount).toBe(CONFIG.visual.particleCount);
+    });
+
+    it('applies visual overrides', () => {
+      const config = createConfig({ particleCount: 4, maxParticles: 80 });
+      expect(config.visual.particleCount).toBe(4);
+      expect(config.visual.maxParticles).toBe(80);
+      expect(config.game.duration).toBe(CONFIG.game.duration);
+    });
+
+    it('result is frozen', () => {
+      const config = createConfig({ particleCount: 4 });
+      expect(() => { config.visual.particleCount = 99; }).toThrow();
+    });
+
+    it('ignores unknown override keys', () => {
+      const config = createConfig({ unknownKey: 42 });
+      expect(config.game.duration).toBe(CONFIG.game.duration);
+    });
+
+    it('overrides do not mutate original CONFIG', () => {
+      createConfig({ particleCount: 1 });
+      expect(CONFIG.visual.particleCount).toBe(8);
     });
   });
 });
