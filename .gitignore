@@ -12,8 +12,10 @@ src/runtime-config.js
 android-sdk/
 gradle/
 *.apk
+*.idsig
 *.keystore
 release-signing.properties
 
 # Cordova project (built outside source tree)
-cordova-app/
+cordova-build/
+.gradle/

@@ -41,16 +41,41 @@ class Game {
             showMenu: () => this.showMenu()
         };
 
+        // Bind button events directly to their container elements. Document-level
+        // event delegation is unreliable on some Android WebViews because touch/click
+        // events may not bubble all the way to document, or may be suppressed by
+        // global CSS such as `touch-action: none`.
+        this._touchHandled = false;
+
         this._handleAction = (e) => {
-            const btn = e.target.closest('[data-action]');
+            // When a touch handler fires, ignore the subsequent synthetic click
+            // so the same press does not trigger the action twice.
+            if (e.type === 'click' && this._touchHandled) {
+                this._touchHandled = false;
+                return;
+            }
+
+            const target = e.target || e.srcElement;
+            if (!target) return;
+
+            const btn = target.closest ? target.closest('[data-action]') : null;
             if (!btn) return;
-            const action = btn.dataset.action;
-            const param = btn.dataset.param;
-            const handler = this._actionHandlers[action];
-            if (handler) handler(param);
+
+            if (e.type === 'touchend' || e.type === 'touchstart') {
+                this._touchHandled = true;
+                // Reset the guard after the synthetic click window has passed.
+                if (this._touchGuardTimeout) clearTimeout(this._touchGuardTimeout);
+                this._touchGuardTimeout = setTimeout(() => {
+                    this._touchHandled = false;
+                }, 350);
+            }
+
+            this._runAction(btn.dataset.action, btn.dataset.param, e.type);
         };
 
-        document.addEventListener('click', this._handleAction);
+        this._bindButtons();
+        this._setupGlobalButtonHandler();
+        this._debugLog('game init');
 
         this._handleResize = () => this.resize();
         this.resize();
@@ -113,12 +138,78 @@ class Game {
     _registerFocusGroups() {
         const queryBtns = (id) => {
             const el = document.getElementById(id);
-            return (el && el.querySelectorAll) ? Array.from(el.querySelectorAll('.btn')) : [];
+            return (el && el.querySelectorAll) ? Array.prototype.slice.call(el.querySelectorAll('.btn')) : [];
         };
 
         this.focusNavigator.registerGroup('menu', queryBtns('startScreen'));
         this.focusNavigator.registerGroup('animationSettings', queryBtns('animationScreen'));
         this.focusNavigator.registerGroup('gameOver', queryBtns('gameOverScreen'));
+    }
+
+    _bindButtons() {
+        // Direct listeners on button containers are more reliable than document
+        // delegation on Android WebViews. We listen to click, touchend and
+        // touchstart so that remote controls (Enter/OK -> click) and touch
+        // screens (touchstart is the most responsive and reliable) all work.
+        const containerIds = ['startScreen', 'animationScreen', 'gameOverScreen', 'modeSwitch'];
+        this._buttonContainers = [];
+        for (var i = 0; i < containerIds.length; i++) {
+            const id = containerIds[i];
+            const el = document.getElementById(id);
+            if (!el || !el.addEventListener) continue;
+            this._buttonContainers.push(el);
+            el.addEventListener('click', this._handleAction, false);
+            el.addEventListener('touchstart', this._handleAction, { passive: true });
+            el.addEventListener('touchend', this._handleAction, false);
+        }
+    }
+
+    _runAction(action, param, source) {
+        const handler = this._actionHandlers[action];
+        if (!handler) return;
+
+        if (typeof console !== 'undefined' && console.log) {
+            console.log('CatHuntingGame: button action [' + action + '] from ' + source);
+        }
+        this._debugLog('btn:' + action + ':' + source);
+
+        handler(param);
+    }
+
+    _setupGlobalButtonHandler() {
+        // Expose a global helper used by inline onclick attributes as a fallback
+        // when addEventListener-based event handling fails on a particular WebView.
+        if (typeof window !== 'undefined') {
+            window._catGame = this;
+            window._catHandleBtnClick = (action, param, event) => {
+                if (event) {
+                    event.preventDefault ? event.preventDefault() : (event.returnValue = false);
+                    event.stopPropagation ? event.stopPropagation() : (event.cancelBubble = true);
+                }
+                this._runAction(action, param, 'inline');
+                return false;
+            };
+        }
+    }
+
+    _isDebugEnabled() {
+        if (typeof window === 'undefined') return false;
+        if (typeof window.__CAT_DEBUG__ !== 'undefined') return window.__CAT_DEBUG__;
+        return true;
+    }
+
+    _debugLog(message) {
+        if (!this._isDebugEnabled()) return;
+        if (typeof document === 'undefined') return;
+        const el = document.getElementById('debugLog');
+        if (!el) return;
+        el.style.display = 'block';
+        const line = document.createElement('div');
+        line.textContent = new Date().toLocaleTimeString() + ' ' + message;
+        el.appendChild(line);
+        if (el.childNodes.length > 30) {
+            el.removeChild(el.firstChild);
+        }
     }
 
     _onScreenChange(screenName) {
@@ -224,12 +315,30 @@ class Game {
             this._rafId = null;
         }
         window.removeEventListener('resize', this._handleResize);
-        document.removeEventListener('click', this._handleAction);
+        if (this._buttonContainers) {
+            for (var i = 0; i < this._buttonContainers.length; i++) {
+                var el = this._buttonContainers[i];
+                if (el && el.removeEventListener) {
+                    el.removeEventListener('click', this._handleAction, false);
+                    el.removeEventListener('touchstart', this._handleAction, { passive: true });
+                    el.removeEventListener('touchend', this._handleAction, false);
+                }
+            }
+            this._buttonContainers = [];
+        }
+        if (typeof window !== 'undefined') {
+            window._catGame = null;
+            window._catHandleBtnClick = null;
+        }
         this.inputHandler.destroy();
         this.focusNavigator.destroy();
         if (this._comboTimeout) {
             clearTimeout(this._comboTimeout);
             this._comboTimeout = null;
+        }
+        if (this._touchGuardTimeout) {
+            clearTimeout(this._touchGuardTimeout);
+            this._touchGuardTimeout = null;
         }
         this.soundManager.destroy();
         this.gameMode.stop();

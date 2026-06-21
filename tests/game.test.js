@@ -44,18 +44,52 @@ const { mockCanvas, mockElements, mockGetElementById, callTracker } = vi.hoisted
         height: 600,
     };
 
+    function createMockElement(id) {
+        const listeners = {};
+        return {
+            id,
+            style: {},
+            classList: { add: vi.fn(), remove: vi.fn() },
+            addEventListener: vi.fn((event, handler) => {
+                listeners[event] = handler;
+            }),
+            removeEventListener: vi.fn((event, handler) => {
+                if (listeners[event] === handler) delete listeners[event];
+            }),
+            getListeners: () => listeners,
+            querySelectorAll: vi.fn(() => []),
+        };
+    }
+
+    const debugLogChildren = [];
+    const mockDebugLog = {
+        id: 'debugLog',
+        style: {},
+        childNodes: debugLogChildren,
+        appendChild: vi.fn((node) => {
+            debugLogChildren.push(node);
+            return node;
+        }),
+        removeChild: vi.fn((node) => {
+            const idx = debugLogChildren.indexOf(node);
+            if (idx !== -1) debugLogChildren.splice(idx, 1);
+            return node;
+        }),
+    };
+
     const mockElements = {
         gameCanvas: mockCanvas,
-        startScreen: { style: {}, classList: { add: vi.fn(), remove: vi.fn() } },
-        gameOverScreen: { style: {}, classList: { add: vi.fn(), remove: vi.fn() } },
-        animationScreen: { style: {}, classList: { add: vi.fn(), remove: vi.fn() } },
-        ui: { style: {}, classList: { add: vi.fn(), remove: vi.fn() } },
-        modeSwitch: { style: {}, classList: { add: vi.fn(), remove: vi.fn() } },
+        startScreen: createMockElement('startScreen'),
+        gameOverScreen: createMockElement('gameOverScreen'),
+        animationScreen: createMockElement('animationScreen'),
+        ui: createMockElement('ui'),
+        modeSwitch: createMockElement('modeSwitch'),
         score: { textContent: '' },
         time: { textContent: '' },
         comboDisplay: { textContent: '', classList: { add: vi.fn(), remove: vi.fn() } },
         finalScore: { textContent: '' },
         maxCombo: { textContent: '' },
+        debugLog: mockDebugLog,
     };
 
     const mockGetElementById = vi.fn((id) => {
@@ -68,6 +102,7 @@ const { mockCanvas, mockElements, mockGetElementById, callTracker } = vi.hoisted
         getElementById: mockGetElementById,
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
+        createElement: vi.fn((tag) => ({ tagName: tag, textContent: '' })),
     };
 
     global.window = {
@@ -226,6 +261,19 @@ describe('Game', () => {
         global.requestAnimationFrame.mockClear();
         global.cancelAnimationFrame.mockClear();
         global.clearTimeout.mockClear();
+
+        // Reset container event listener mocks
+        ['startScreen', 'animationScreen', 'gameOverScreen', 'modeSwitch'].forEach((id) => {
+            mockElements[id].addEventListener.mockClear();
+            mockElements[id].removeEventListener.mockClear();
+        });
+
+        // Reset debug log mock
+        mockElements.debugLog.style.display = '';
+        mockElements.debugLog.childNodes.length = 0;
+        mockElements.debugLog.appendChild.mockClear();
+        mockElements.debugLog.removeChild.mockClear();
+        delete global.window.__CAT_DEBUG__;
     });
 
     afterEach(() => {
@@ -356,9 +404,11 @@ describe('Game', () => {
             game = new Game();
         });
 
-        it('removes document click event listener', () => {
+        it('removes button container event listeners', () => {
             game.destroy();
-            expect(global.document.removeEventListener).toHaveBeenCalledWith('click', game._handleAction);
+            expect(mockElements.startScreen.removeEventListener).toHaveBeenCalledWith('click', game._handleAction, false);
+            expect(mockElements.startScreen.removeEventListener).toHaveBeenCalledWith('touchstart', game._handleAction, { passive: true });
+            expect(mockElements.startScreen.removeEventListener).toHaveBeenCalledWith('touchend', game._handleAction, false);
         });
 
         it('removes window resize event listener', () => {
@@ -852,6 +902,127 @@ describe('Game', () => {
         it('destroy calls focusNavigator.destroy', () => {
             game.destroy();
             expect(game.focusNavigator.destroy).toHaveBeenCalled();
+        });
+    });
+
+    // ---- Button action handling ----
+
+    describe('button action handling', () => {
+        beforeEach(() => {
+            game = new Game();
+        });
+
+        function fakeEvent(type, target) {
+            return {
+                type,
+                target,
+                preventDefault: vi.fn(),
+                stopPropagation: vi.fn(),
+            };
+        }
+
+        function fakeButton(action, param) {
+            const el = document.createElement ? document.createElement('button') : {
+                dataset: {},
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn(),
+            };
+            el.dataset = { action, param };
+            el.closest = vi.fn((selector) => {
+                if (selector === '[data-action]' && el.dataset.action) return el;
+                return null;
+            });
+            return el;
+        }
+
+        it('binds click, touchstart and touchend listeners to button containers', () => {
+            expect(mockElements.startScreen.addEventListener).toHaveBeenCalledWith('click', game._handleAction, false);
+            expect(mockElements.startScreen.addEventListener).toHaveBeenCalledWith('touchstart', game._handleAction, { passive: true });
+            expect(mockElements.startScreen.addEventListener).toHaveBeenCalledWith('touchend', game._handleAction, false);
+            expect(mockElements.animationScreen.addEventListener).toHaveBeenCalledWith('click', game._handleAction, false);
+            expect(mockElements.gameOverScreen.addEventListener).toHaveBeenCalledWith('click', game._handleAction, false);
+            expect(mockElements.modeSwitch.addEventListener).toHaveBeenCalledWith('click', game._handleAction, false);
+        });
+
+        it('triggers action handler on click', () => {
+            const spy = vi.spyOn(game, 'startGameMode');
+            const btn = fakeButton('startGameMode');
+            const handlers = mockElements.startScreen.getListeners();
+            handlers.click(fakeEvent('click', btn));
+            expect(spy).toHaveBeenCalled();
+        });
+
+        it('triggers action handler on touchstart', () => {
+            const spy = vi.spyOn(game, 'showAnimationSettings');
+            const btn = fakeButton('showAnimationSettings');
+            const handlers = mockElements.startScreen.getListeners();
+            handlers.touchstart(fakeEvent('touchstart', btn));
+            expect(spy).toHaveBeenCalled();
+        });
+
+        it('triggers action handler on touchend', () => {
+            const spy = vi.spyOn(game, 'showAnimationSettings');
+            const btn = fakeButton('showAnimationSettings');
+            const handlers = mockElements.startScreen.getListeners();
+            handlers.touchend(fakeEvent('touchend', btn));
+            expect(spy).toHaveBeenCalled();
+        });
+
+        it('ignores synthetic click after a touchend', () => {
+            const spy = vi.spyOn(game, 'startGameMode');
+            const btn = fakeButton('startGameMode');
+            const handlers = mockElements.startScreen.getListeners();
+            handlers.touchend(fakeEvent('touchend', btn));
+            expect(spy).toHaveBeenCalledTimes(1);
+            handlers.click(fakeEvent('click', btn));
+            expect(spy).toHaveBeenCalledTimes(1);
+        });
+
+        it('does nothing when target has no data-action ancestor', () => {
+            const spy = vi.spyOn(game, 'startGameMode');
+            const unrelated = {
+                dataset: {},
+                closest: vi.fn(() => null),
+            };
+            const handlers = mockElements.startScreen.getListeners();
+            handlers.click(fakeEvent('click', unrelated));
+            expect(spy).not.toHaveBeenCalled();
+        });
+
+        it('passes data-param to the action handler', () => {
+            const spy = vi.spyOn(game, 'startAnimationMode');
+            const btn = fakeButton('startAnimationMode', '30min');
+            const handlers = mockElements.animationScreen.getListeners();
+            handlers.click(fakeEvent('click', btn));
+            expect(spy).toHaveBeenCalledWith('30min');
+        });
+    });
+
+    // ---- Debug logging ----
+
+    describe('debug logging', () => {
+        beforeEach(() => {
+            game = new Game();
+        });
+
+        it('writes to debug panel when __CAT_DEBUG__ is true', () => {
+            global.window.__CAT_DEBUG__ = true;
+            game._debugLog('test message');
+            expect(mockElements.debugLog.style.display).toBe('block');
+            expect(mockElements.debugLog.appendChild).toHaveBeenCalled();
+        });
+
+        it('writes to debug panel by default when __CAT_DEBUG__ is undefined', () => {
+            game._debugLog('test message');
+            expect(mockElements.debugLog.style.display).toBe('block');
+            expect(mockElements.debugLog.appendChild).toHaveBeenCalled();
+        });
+
+        it('does not write to debug panel when __CAT_DEBUG__ is false', () => {
+            global.window.__CAT_DEBUG__ = false;
+            mockElements.debugLog.appendChild.mockClear();
+            game._debugLog('test message');
+            expect(mockElements.debugLog.appendChild).not.toHaveBeenCalled();
         });
     });
 });

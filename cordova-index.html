@@ -2,24 +2,29 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *; img-src 'self' data: content: blob:;">
     <title>猫咪捕猎游戏</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            touch-action: none;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
         }
 
-        body {
+        html, body {
             background: #f5f0e8;
             overflow: hidden;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
+            touch-action: manipulation;
+            overscroll-behavior: none;
+        }
+
+        body {
             display: flex;
             justify-content: center;
             align-items: center;
@@ -30,6 +35,13 @@
             background: #f5f0e8;
             cursor: crosshair;
             display: block;
+            touch-action: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
 
         #ui {
@@ -42,6 +54,23 @@
             align-items: center;
             pointer-events: none;
             z-index: 10;
+            display: none;
+        }
+
+        #debugLog {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 120px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.75);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 6px 8px;
+            z-index: 1000;
+            pointer-events: none;
             display: none;
         }
 
@@ -111,10 +140,15 @@
             font-size: 22px;
             border-radius: 50px;
             cursor: pointer;
-            pointer-events: all;
+            pointer-events: auto;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
             transition: transform 0.2s, border-color 100ms ease;
             margin: 8px;
             min-width: 220px;
+            /* Ensure the button itself is a hit target and not swallowed by flex children */
+            position: relative;
+            z-index: 1;
         }
 
         .btn:hover {
@@ -172,7 +206,7 @@
             position: fixed;
             top: 15px;
             right: 15px;
-            z-index: 50;
+            z-index: 200;
             display: none;
         }
 
@@ -215,8 +249,10 @@
 
     <div class="combo-display" id="comboDisplay"></div>
 
+    <div id="debugLog"></div>
+
     <div class="mode-switch" id="modeSwitch">
-        <button data-action="switchMode">返回菜单</button>
+        <button data-action="switchMode" onclick="return window._catHandleBtnClick('switchMode', null, event)">返回菜单</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -224,42 +260,42 @@
     <div id="startScreen">
         <h1>🐱 猫咪游戏</h1>
         <p class="subtitle">选择模式开始</p>
-        <button class="btn" data-action="startGameMode">
+        <button class="btn" data-action="startGameMode" onclick="return window._catHandleBtnClick('startGameMode', null, event)">
             🎮 游戏模式
-            <span class="mode-description">点击捕捉，60秒挑战</span>
+            <span class="mode-description">点击捕虫草，60秒挑战</span>
         </button>
-        <button class="btn btn-outline" data-action="showAnimationSettings">
-            📺 动画模式
+        <button class="btn btn-outline" data-action="showAnimationSettings" onclick="return window._catHandleBtnClick('showAnimationSettings', null, event)">
+            🎵 动画模式
             <span class="mode-description">无限循环，给猫看的动画</span>
         </button>
     </div>
 
     <div id="animationScreen">
-        <h2>📺 动画模式</h2>
+        <h2>🎵 动画模式</h2>
         <p class="subtitle">选择播放时长</p>
         <div class="duration-options">
-            <button class="btn" data-action="startAnimationMode" data-param="30min">
+            <button class="btn" data-action="startAnimationMode" data-param="30min" onclick="return window._catHandleBtnClick('startAnimationMode', '30min', event)">
                 30 分钟
             </button>
-            <button class="btn" data-action="startAnimationMode" data-param="1hour">
+            <button class="btn" data-action="startAnimationMode" data-param="1hour" onclick="return window._catHandleBtnClick('startAnimationMode', '1hour', event)">
                 1 小时
             </button>
-            <button class="btn btn-secondary" data-action="startAnimationMode" data-param="infinite">
+            <button class="btn btn-secondary" data-action="startAnimationMode" data-param="infinite" onclick="return window._catHandleBtnClick('startAnimationMode', 'infinite', event)">
                 无限循环
             </button>
         </div>
-        <button class="btn btn-outline back-btn" data-action="showMenu">返回</button>
+        <button class="btn btn-outline back-btn" data-action="showMenu" onclick="return window._catHandleBtnClick('showMenu', null, event)">返回</button>
     </div>
 
     <div id="gameOverScreen">
         <h1>游戏结束！</h1>
         <div class="final-score">最终得分: <span id="finalScore">0</span></div>
         <p class="max-combo-label">最高连击: <span id="maxCombo">0</span></p>
-        <button class="btn" data-action="restart">再玩一次</button>
-        <button class="btn btn-outline" data-action="showMenu">返回菜单</button>
+        <button class="btn" data-action="restart" onclick="return window._catHandleBtnClick('restart', null, event)">再玩一次</button>
+        <button class="btn btn-outline" data-action="showMenu" onclick="return window._catHandleBtnClick('showMenu', null, event)">返回菜单</button>
     </div>
 
     <script src="cordova.js"></script>
-    <script type="module" src="src/main.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

@@ -35,7 +35,7 @@ describe('InputHandler', () => {
 
     it('registers mousedown and touchstart listeners', () => {
         expect(canvas.addEventListener).toHaveBeenCalledWith('mousedown', expect.any(Function));
-        expect(canvas.addEventListener).toHaveBeenCalledWith('touchstart', expect.any(Function));
+        expect(canvas.addEventListener).toHaveBeenCalledWith('touchstart', expect.any(Function), { passive: false });
     });
 
     it('calls onInput with correct coords for 1:1 scale', () => {

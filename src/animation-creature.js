@@ -58,7 +58,7 @@ class AnimationCreature {
     set state(newStateName) {
         if (this._currentState.name === newStateName) return;
         const allowed = STATE_TRANSITIONS[this._currentState.name];
-        if (!allowed.includes(newStateName)) return;
+        if (allowed.indexOf(newStateName) < 0) return;
         this._currentState.exit(this);
         this._currentState = new STATE_MAP[newStateName]();
         this._currentState.enter(this);
@@ -79,7 +79,7 @@ class AnimationCreature {
         }
 
         const transition = this._currentState.update(this);
-        if (transition && STATE_TRANSITIONS[this._currentState.name].includes(transition)) {
+        if (transition && STATE_TRANSITIONS[this._currentState.name].indexOf(transition) >= 0) {
             this.state = transition;
         }
 

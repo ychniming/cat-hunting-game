@@ -10,9 +10,7 @@
     "test": "vitest run --exclude e2e",
     "test:watch": "vitest --exclude e2e",
     "test:coverage": "vitest run --coverage --exclude e2e",
-    "test:e2e": "playwright test",
-    "build:android": "cordova build android",
-    "build:android-release": "cordova build android --release"
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "cat",
@@ -23,8 +21,13 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
     "@playwright/test": "^1.60.0",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-node-resolve": "^15.3.1",
     "@vitest/coverage-v8": "^4.1.8",
+    "rollup": "^4.62.2",
     "vitest": "^4.1.8"
   }
 }

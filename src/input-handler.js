@@ -27,7 +27,9 @@ class InputHandler {
         };
 
         this.canvas.addEventListener('mousedown', this._mouseHandler);
-        this.canvas.addEventListener('touchstart', this._touchHandler);
+        // Use passive: false so preventDefault reliably prevents the synthetic click
+        // on the canvas. Buttons live above the canvas and are not affected.
+        this.canvas.addEventListener('touchstart', this._touchHandler, { passive: false });
     }
 
     destroy() {
