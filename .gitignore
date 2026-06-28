@@ -18,4 +18,5 @@ release-signing.properties
 
 # Cordova project (built outside source tree)
 cordova-build/
+cordova-ios-build/
 .gradle/

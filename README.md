@@ -44,6 +44,8 @@
 │   └── adr/                # 架构决策记录
 ├── package.json            # 项目配置
 ├── cordova-setup.ps1       # Android打包脚本 (PowerShell)
+├── cordova-ios-build.sh    # iOS打包脚本 (macOS bash)
+├── docs/ios-build-guide.md # iOS打包详细指南
 └── extract_frames.py       # 视频帧提取工具
 ```
 
@@ -117,7 +119,30 @@ $env:CAT_KEYSTORE_KEYPASS = "your-key-password"
 | `cordova prepare` 报 “The operation completed successfully” | Node.js `fs.cpSync` 在非 ASCII 路径下的 bug | 脚本自动补丁 `cordova-common/src/FileUpdater.js` |
 | aapt2 编码警告 | 中文路径导致 aapt2 解析错误 | 已在 `gradle.properties` 中启用 `android.overridePathCheck=true`，警告不影响构建结果 |
 
-### 3. 部署到服务器
+### 3. iOS（需 macOS）
+
+> iOS 打包必须在 macOS 上完成（Apple 强制要求 Xcode）。当前 Windows 环境已完成所有准备工作。
+
+**Mac 端一键构建:**
+```bash
+# 在 Mac 上执行
+chmod +x cordova-ios-build.sh
+./cordova-ios-build.sh --debug    # 真机调试（免费 Apple ID）
+./cordova-ios-build.sh --release  # App Store 上架（需 $99/年账号）
+```
+
+**当前构建配置:**
+| 属性 | 值 |
+|------|-----|
+| Bundle ID | com.catgame.hunting |
+| 最低 iOS | 13.0 |
+| Cordova iOS | 7.1.1 |
+| WebView | WKWebView (CDVWKWebViewEngine) |
+| 签名 | Personal Team（免费）/ Distribution（$99/年） |
+
+**详细步骤:** 见 [docs/ios-build-guide.md](docs/ios-build-guide.md)
+
+### 4. 部署到服务器
 
 将以下文件上传到任意静态托管服务：
 - `index.html`
