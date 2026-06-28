@@ -1,0 +1,218 @@
+name: iOS Cloud Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Cordova CLI
+        run: npm install -g cordova@12
+
+      - name: Bundle game JS with Rollup + Babel
+        run: |
+          mkdir -p www/src
+          cp -R src/* www/src/
+          npx rollup -c rollup.config.mjs
+          test -f www/app.js || { echo "ERROR: app.js not generated"; exit 1; }
+          echo "Generated app.js ($(du -h www/app.js | cut -f1))"
+
+      - name: Create Cordova iOS project
+        run: |
+          BUILD_DIR=cordova-ios-build
+          if [ ! -d "$BUILD_DIR/platforms/ios" ]; then
+            rm -rf "$BUILD_DIR"
+            cordova create "$BUILD_DIR" com.catgame.hunting CatHuntingGame
+          fi
+          cd "$BUILD_DIR"
+          if [ ! -d "platforms/ios" ]; then
+            cordova platform add ios@7.1.1
+          fi
+
+      - name: Inject iOS preferences
+        run: |
+          python3 << 'PYEOF'
+          import xml.etree.ElementTree as ET
+          config_path = "cordova-ios-build/config.xml"
+          tree = ET.parse(config_path)
+          root = tree.getroot()
+          ns = "http://www.w3.org/ns/widgets"
+          ET.register_namespace("", ns)
+
+          ios_prefs = {
+              "deployment-target": "13.0",
+              "target-device": "universal",
+              "TopActivityIndicator": "gray",
+              "EnableViewportScale": "false",
+              "StatusBarOverlaysWebView": "true",
+              "StatusBarStyle": "lightcontent",
+              "BackupWebStorage": "none",
+              "DisallowOverscroll": "true",
+              "Orientation": "all",
+              "CordovaWebViewEngine": "CDVWKWebViewEngine",
+              "ScrollEnabled": "false",
+              "SuppressesIncrementalRendering": "true",
+              "SplashScreenDelay": "500",
+              "FadeSplashScreen": "true",
+              "FadeSplashScreenDuration": "300",
+              "ShowSplashScreenSpinner": "false",
+          }
+
+          for name, value in ios_prefs.items():
+              existing = None
+              for pref in root.findall(f"{{{ns}}}preference"):
+                  if pref.get("name") == name:
+                      existing = pref
+                      break
+              if existing is None:
+                  pref = ET.SubElement(root, "preference")
+                  pref.set("name", name)
+                  pref.set("value", value)
+
+          for tag, attr, val in [("allow-navigation", "href", "*"), ("access", "origin", "*")]:
+              found = False
+              for el in root.findall(f"{{{ns}}}{tag}"):
+                  if el.get(attr) == val:
+                      found = True
+                      break
+              if not found:
+                  el = ET.SubElement(root, tag)
+                  el.set(attr, val)
+
+          tree.write(config_path, encoding="UTF-8", xml_declaration=True)
+          print("iOS preferences injected")
+          PYEOF
+
+      - name: Sync game assets into Cordova www
+        run: |
+          BUILD_DIR=cordova-ios-build
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          DEBUG_FLAG="true"
+          if [ "$BUILD_TYPE" = "release" ]; then
+            DEBUG_FLAG="false"
+          fi
+
+          cp cordova-index.html "$BUILD_DIR/www/index.html"
+          cp www/app.js "$BUILD_DIR/www/app.js"
+
+          python3 -c "
+          import re
+          path = '$BUILD_DIR/www/index.html'
+          with open(path, 'r', encoding='utf-8') as f:
+              html = f.read()
+          if '__CAT_DEBUG__' not in html:
+              html = re.sub(r'(<script src=\"cordova\.js\"></script>)', r'\1\n    <script>window.__CAT_DEBUG__ = $DEBUG_FLAG;</script>', html)
+              with open(path, 'w', encoding='utf-8') as f:
+                  f.write(html)
+              print(f'Injected __CAT_DEBUG__=$DEBUG_FLAG')
+          "
+
+      - name: Run cordova prepare
+        run: |
+          cd cordova-ios-build
+          cordova prepare ios
+
+          # Manual sync (cordova prepare may skip index.html)
+          IOS_WWW="platforms/ios/www"
+          cp www/index.html "$IOS_WWW/index.html"
+          cp www/app.js "$IOS_WWW/app.js"
+          for d in css js img src; do
+            rm -rf "$IOS_WWW/$d"
+          done
+
+          # Patch Info.plist
+          INFO_PLIST="platforms/ios/CatHuntingGame/Info.plist"
+          if [ -f "$INFO_PLIST" ]; then
+            /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$INFO_PLIST" 2>/dev/null || true
+          fi
+
+          echo "Verified: platforms/ios/www has game page + bundled app.js"
+
+      - name: Build iOS app (unsigned)
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          cd cordova-ios-build
+
+          # Build without code signing (for sideloading via Sideloadly/AltStore)
+          cordova build ios --"$BUILD_TYPE" --device \
+            --buildFlag="CODE_SIGN_IDENTITY=" \
+            --buildFlag="CODE_SIGNING_REQUIRED=NO" \
+            --buildFlag="CODE_SIGNING_ALLOWED=NO" \
+            --buildFlag="EXPANDED_CODE_SIGN_IDENTITY=" \
+            --buildFlag="EXPANDED_CODE_SIGN_IDENTITY_NAME="
+
+      - name: Package unsigned IPA
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          cd cordova-ios-build/platforms/ios
+
+          # Find the .app built by xcodebuild
+          APP_PATH=$(find build -name "*.app" -type d 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            # cordova-ios 7+ may use a different output path
+            APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "CatHuntingGame.app" -type d 2>/dev/null | head -1)
+          fi
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: .app not found"
+            find . -name "*.app" -type d 2>/dev/null
+            exit 1
+          fi
+
+          echo "Found app: $APP_PATH"
+
+          # Create IPA structure
+          rm -rf Payload
+          mkdir Payload
+          cp -R "$APP_PATH" Payload/
+          zip -r -X "../CatHuntingGame-$BUILD_TYPE-unsigned.ipa" Payload
+          cd ..
+          ls -lh *.ipa
+          echo "IPA created: $(pwd)/CatHuntingGame-$BUILD_TYPE-unsigned.ipa"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CatHuntingGame-iOS-${{ github.event.inputs.build_type || 'debug' }}-unsigned
+          path: cordova-ios-build/CatHuntingGame-*.ipa
+          retention-days: 30
+
+      - name: Build summary
+        run: |
+          echo "## iOS Cloud Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build type:** ${{ github.event.inputs.build_type || 'debug' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### How to install" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the IPA artifact from this workflow run" >> $GITHUB_STEP_SUMMARY
+          echo "2. Install [Sideloadly](https://sideloadly.io/) on your PC" >> $GITHUB_STEP_SUMMARY
+          echo "3. Connect iPhone via USB, open Sideloadly" >> $GITHUB_STEP_SUMMARY
+          echo "4. Drag the IPA into Sideloadly, sign with your Apple ID" >> $GITHUB_STEP_SUMMARY
+          echo "5. On iPhone: Settings > General > VPN & Device Management > trust your Apple ID" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Note: Free Apple ID signing expires after 7 days." >> $GITHUB_STEP_SUMMARY

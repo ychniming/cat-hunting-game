@@ -251,40 +251,70 @@ Bundle ID 冲突。在 Xcode → Signing & Capabilities 中改为唯一值，如
 
 ---
 
-## 八、无 Mac 替代方案
+## 八、云打包方案（无需 Mac）
 
-### GitHub Actions（云构建）
+项目已内置 GitHub Actions 云打包工作流 [`.github/workflows/ios-build.yml`](../.github/workflows/ios-build.yml)，可在 GitHub 的 macOS runner 上构建未签名 IPA，配合 Sideloadly 免费安装到 iPhone。
 
-在仓库中添加 `.github/workflows/ios-build.yml`：
+### 8.1 前提条件
 
-```yaml
-name: iOS Build
-on:
-  workflow_dispatch:
-jobs:
-  build:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - run: npm install
-      - run: chmod +x cordova-ios-build.sh
-      - run: ./cordova-ios-build.sh --debug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ios-app
-          path: cordova-ios-build/platforms/ios/
+- GitHub 账号（免费即可）
+- iPhone（iOS 13+）
+- Windows PC（用于运行 Sideloadly 重签）
+- 免费 Apple ID
+
+### 8.2 推送项目到 GitHub
+
+```bash
+# 1. 在 GitHub 上创建仓库（公开仓库免费无限构建，私有仓库每月200分钟macOS时间）
+# 2. 添加远程并推送
+git remote add origin https://github.com/你的用户名/猫咪动画改造游戏.git
+git push -u origin main
 ```
 
-> 注意：GitHub Actions 无法签名，生成的 App 只能在模拟器运行。真机签名需要在 Mac 上配置证书。
+### 8.3 触发云构建
 
-### 云 Mac 服务
+**方式一：自动触发**
+推送到 `main` 分支会自动触发构建。
+
+**方式二：手动触发**
+1. 打开 GitHub 仓库页面
+2. Actions → iOS Cloud Build → Run workflow
+3. 选择 `debug` 或 `release`，点击 Run
+
+构建约需 10-15 分钟，完成后在 Actions 运行页面下载 IPA artifact。
+
+### 8.4 安装到 iPhone（Sideloadly 重签）
+
+云构建产出的是**未签名 IPA**，需要用 Sideloadly + 免费 Apple ID 重签后安装：
+
+1. **下载 IPA**：GitHub Actions 运行页面 → Artifacts → 下载 `CatHuntingGame-iOS-debug-unsigned.zip` → 解压得到 `.ipa`
+2. **安装 Sideloadly**：访问 [sideloadly.io](https://sideloadly.io/) 下载 Windows 版并安装
+3. **连接 iPhone**：用 USB 线连接 iPhone 到 PC，信任电脑
+4. **重签安装**：
+   - 打开 Sideloadly
+   - 输入你的 Apple ID
+   - 将 `.ipa` 拖入 Sideloadly 窗口
+   - 点击 Start，等待重签完成
+5. **信任开发者**：iPhone → 设置 → 通用 → VPN与设备管理 → 点击你的 Apple ID → 信任
+
+### 8.5 免费签名的限制
+
+| 限制 | 说明 |
+|------|------|
+| 7 天过期 | 需每周用 Sideloadly 重新签名 |
+| 最多 3 个 App | 同时最多签 3 个侧载应用 |
+| 每周签名次数 | 免费 Apple ID 约 10 次/周 |
+| 推送/钱包等 | 不可用（需付费开发者账号） |
+
+> 如需永久安装无 7 天限制，需购买 $99/年 Apple Developer Program，或使用 TrollStore（仅限特定 iOS 版本设备）。
+
+### 8.6 云 Mac 服务（替代方案）
+
+如果 GitHub Actions 不满足需求，可使用付费云 Mac：
 
 | 服务 | 价格 | 特点 |
 |------|------|------|
 | MacStadium | $30+/月 | 专属 Mac，可远程桌面 |
 | MacInCloud | $20+/月 | 按小时租用 |
 | AWS EC2 Mac | ~$1/小时 | 按需启动，最低租24小时 |
-| GitHub Actions | 免费2000分钟/月 | 无 Mac 硬件首选 |
+| GitHub Actions | 公开仓库免费无限 / 私有200分钟/月 | 无 Mac 硬件首选 |
