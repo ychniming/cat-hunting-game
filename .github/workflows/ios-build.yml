@@ -179,13 +179,57 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$INFO_PLIST" 2>/dev/null || true
           fi
 
+      - name: Verify Cordova iOS requirements
+        run: |
+          set -x
+          cd cordova-ios-build
+          cordova requirements ios || true
+
       - name: Install CocoaPods and verify project
         run: |
           set -x
           cd cordova-ios-build/platforms/ios
-          pod install
+          echo "=== platforms/ios contents ==="
+          ls -la
+          echo "=== Podfile exists? ==="
+          if [ -f Podfile ]; then
+            echo "=== Podfile content ==="
+            cat Podfile
+            echo ""
+            echo "Running pod install --repo-update (combines repo update + install)..."
+            # Temporarily disable errexit so pod install failure does not fail the step
+            set +e
+            pod install --repo-update 2>&1
+            POD_EXIT=$?
+            set -e
+            if [ $POD_EXIT -ne 0 ]; then
+              echo "WARNING: pod install --repo-update failed (exit $POD_EXIT)"
+              echo "Trying pod setup + pod install as fallback..."
+              set +e
+              pod setup 2>&1
+              pod install 2>&1
+              POD_EXIT2=$?
+              set -e
+              if [ $POD_EXIT2 -ne 0 ]; then
+                echo "WARNING: pod install still failed (exit $POD_EXIT2)."
+                echo "Will attempt xcodebuild anyway — cordova-ios 7+ may still build with embedded CordovaLib."
+              else
+                echo "pod install succeeded on fallback attempt."
+              fi
+            else
+              echo "pod install succeeded."
+            fi
+          else
+            echo "No Podfile found. cordova-ios 7+ should have created one."
+            echo "Will attempt build without pod install (CordovaLib may be embedded as subproject)."
+          fi
+          echo ""
+          echo "=== Workspace contents ==="
+          ls -la CatHuntingGame.xcworkspace 2>/dev/null || echo "No xcworkspace"
           echo "=== Schemes ==="
           xcodebuild -workspace CatHuntingGame.xcworkspace -list 2>&1 || true
+          echo "=== Pods directory (if any) ==="
+          ls -la Pods 2>/dev/null || echo "No Pods directory"
 
       - name: Build iOS app (unsigned)
         run: |
@@ -197,8 +241,17 @@ jobs:
 
           cd cordova-ios-build/platforms/ios
 
+          echo "=== Build configuration ==="
+          echo "Config: $CONFIG"
+          echo "Workspace: $(ls -d CatHuntingGame.xcworkspace 2>/dev/null || echo MISSING)"
+          echo "Scheme list:"
+          xcodebuild -workspace CatHuntingGame.xcworkspace -list 2>&1 || true
+          echo ""
+
           # Build with xcodebuild directly (bypasses cordova build signing issues)
           # No code signing — the IPA will be signed later via Sideloadly
+          # Use -derivedDataPath to keep build output inside the project, not DerivedData
+          set +e
           xcodebuild \
             -workspace CatHuntingGame.xcworkspace \
             -scheme CatHuntingGame \
@@ -209,10 +262,30 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             EXPANDED_CODE_SIGN_IDENTITY="" \
-            EXPANDED_CODE_SIGN_IDENTITY_NAME=""
+            EXPANDED_CODE_SIGN_IDENTITY_NAME="" \
+            -destination "generic/platform=ios"
+          XCODEBUILD_EXIT=$?
+          set -e
 
-          echo "=== Build output ==="
+          echo ""
+          echo "=== Build exit code: $XCODEBUILD_EXIT ==="
+          echo "=== Build output tree ==="
+          find build -maxdepth 4 -type d 2>/dev/null | head -50
+          echo ""
+          echo "=== .app files in build/ ==="
           find build -name "*.app" -type d 2>/dev/null
+
+          if [ $XCODEBUILD_EXIT -ne 0 ]; then
+            echo ""
+            echo "ERROR: xcodebuild failed with exit $XCODEBUILD_EXIT"
+            echo "=== Diagnostic: xcworkspace contents ==="
+            ls -la CatHuntingGame.xcworkspace/ 2>/dev/null || true
+            echo "=== Diagnostic: xcworkspace contents (data) ==="
+            cat CatHuntingGame.xcworkspace/contents.xcworkspacedata 2>/dev/null || true
+            echo "=== Diagnostic: Pods.xcodeproj exists? ==="
+            ls -la Pods/Pods.xcodeproj 2>/dev/null || echo "No Pods.xcodeproj (pod install may have failed)"
+            exit $XCODEBUILD_EXIT
+          fi
 
       - name: Package unsigned IPA
         run: |
