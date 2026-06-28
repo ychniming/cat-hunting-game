@@ -35,6 +35,15 @@ jobs:
       - name: Install Cordova CLI
         run: npm install -g cordova@12
 
+      - name: Verify macOS build environment
+        run: |
+          set -x
+          sudo xcode-select -s /Applications/Xcode.app 2>/dev/null || true
+          xcodebuild -version
+          pod --version
+          which cordova
+          cordova --version
+
       - name: Bundle game JS with Rollup + Babel
         run: |
           mkdir -p www/src
@@ -45,15 +54,17 @@ jobs:
 
       - name: Create Cordova iOS project
         run: |
+          set -x
+          cordova --version
           BUILD_DIR=cordova-ios-build
-          if [ ! -d "$BUILD_DIR/platforms/ios" ]; then
-            rm -rf "$BUILD_DIR"
-            cordova create "$BUILD_DIR" com.catgame.hunting CatHuntingGame
-          fi
+          rm -rf "$BUILD_DIR"
+          cordova create "$BUILD_DIR" com.catgame.hunting CatHuntingGame
           cd "$BUILD_DIR"
-          if [ ! -d "platforms/ios" ]; then
-            cordova platform add ios@7.1.1
-          fi
+          cordova platform add ios@7.1.1
+          echo "=== platforms/ios contents ==="
+          ls -la platforms/ios/ || echo "ERROR: platforms/ios not found"
+          echo "=== xcworkspace exists? ==="
+          ls -la platforms/ios/*.xcworkspace 2>/dev/null || echo "No xcworkspace"
 
       - name: Inject iOS preferences
         run: |
@@ -146,36 +157,35 @@ jobs:
               print(f'Injected __CAT_DEBUG__={debug_flag}')
           PYEOF
 
-      - name: Run cordova prepare and install pods
+      - name: Run cordova prepare
         run: |
+          set -x
           cd cordova-ios-build
           cordova prepare ios --verbose
 
-          # Manual sync (cordova prepare may skip index.html)
+      - name: Sync game assets
+        run: |
+          set -x
+          cd cordova-ios-build
           IOS_WWW="platforms/ios/www"
           cp www/index.html "$IOS_WWW/index.html"
           cp www/app.js "$IOS_WWW/app.js"
           for d in css js img src; do
             rm -rf "$IOS_WWW/$d"
           done
-
           # Patch Info.plist
           INFO_PLIST="platforms/ios/CatHuntingGame/Info.plist"
           if [ -f "$INFO_PLIST" ]; then
             /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$INFO_PLIST" 2>/dev/null || true
           fi
 
-          # Install CocoaPods dependencies (required by cordova-ios 7+)
-          cd platforms/ios
+      - name: Install CocoaPods and verify project
+        run: |
+          set -x
+          cd cordova-ios-build/platforms/ios
           pod install
-          cd ../..
-
-          echo "=== iOS project structure ==="
-          ls -la platforms/ios/
-          echo "=== Workspace exists? ==="
-          ls -la platforms/ios/*.xcworkspace 2>/dev/null || echo "ERROR: No .xcworkspace found"
           echo "=== Schemes ==="
-          xcodebuild -workspace platforms/ios/CatHuntingGame.xcworkspace -list 2>&1 || true
+          xcodebuild -workspace CatHuntingGame.xcworkspace -list 2>&1 || true
 
       - name: Build iOS app (unsigned)
         run: |
