@@ -146,10 +146,10 @@ jobs:
               print(f'Injected __CAT_DEBUG__={debug_flag}')
           PYEOF
 
-      - name: Run cordova prepare
+      - name: Run cordova prepare and install pods
         run: |
           cd cordova-ios-build
-          cordova prepare ios
+          cordova prepare ios --verbose
 
           # Manual sync (cordova prepare may skip index.html)
           IOS_WWW="platforms/ios/www"
@@ -165,20 +165,44 @@ jobs:
             /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$INFO_PLIST" 2>/dev/null || true
           fi
 
-          echo "Verified: platforms/ios/www has game page + bundled app.js"
+          # Install CocoaPods dependencies (required by cordova-ios 7+)
+          cd platforms/ios
+          pod install
+          cd ../..
+
+          echo "=== iOS project structure ==="
+          ls -la platforms/ios/
+          echo "=== Workspace exists? ==="
+          ls -la platforms/ios/*.xcworkspace 2>/dev/null || echo "ERROR: No .xcworkspace found"
+          echo "=== Schemes ==="
+          xcodebuild -workspace platforms/ios/CatHuntingGame.xcworkspace -list 2>&1 || true
 
       - name: Build iOS app (unsigned)
         run: |
           BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
-          cd cordova-ios-build
+          CONFIG="Debug"
+          if [ "$BUILD_TYPE" = "release" ]; then
+            CONFIG="Release"
+          fi
 
-          # Build without code signing (for sideloading via Sideloadly/AltStore)
-          cordova build ios --"$BUILD_TYPE" --device \
-            --buildFlag="CODE_SIGN_IDENTITY=" \
-            --buildFlag="CODE_SIGNING_REQUIRED=NO" \
-            --buildFlag="CODE_SIGNING_ALLOWED=NO" \
-            --buildFlag="EXPANDED_CODE_SIGN_IDENTITY=" \
-            --buildFlag="EXPANDED_CODE_SIGN_IDENTITY_NAME="
+          cd cordova-ios-build/platforms/ios
+
+          # Build with xcodebuild directly (bypasses cordova build signing issues)
+          # No code signing — the IPA will be signed later via Sideloadly
+          xcodebuild \
+            -workspace CatHuntingGame.xcworkspace \
+            -scheme CatHuntingGame \
+            -configuration "$CONFIG" \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            EXPANDED_CODE_SIGN_IDENTITY_NAME=""
+
+          echo "=== Build output ==="
+          find build -name "*.app" -type d 2>/dev/null
 
       - name: Package unsigned IPA
         run: |
