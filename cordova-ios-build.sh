@@ -131,15 +131,15 @@ if ios_platform is None:
     ios_platform = ET.SubElement(root, "platform")
     ios_platform.set("name", "ios")
 
-# Inject preferences (only if not already present)
+# Inject preferences into <platform name="ios"> (only if not already present)
 for name, value in ios_prefs.items():
     existing = None
-    for pref in root.findall(f"{{{ns}}}preference"):
+    for pref in ios_platform.findall(f"{{{ns}}}preference"):
         if pref.get("name") == name:
             existing = pref
             break
     if existing is None:
-        pref = ET.SubElement(root, "preference")
+        pref = ET.SubElement(ios_platform, "preference")
         pref.set("name", name)
         pref.set("value", value)
 
@@ -193,19 +193,22 @@ if [ "$RELEASE" = true ]; then
     DEBUG_FLAG="false"
 fi
 
-python3 -c "
+export BUILD_DIR DEBUG_FLAG
+python3 << 'PYEOF'
+import os
 import re
-path = '$BUILD_DIR/www/index.html'
+path = os.path.join(os.environ['BUILD_DIR'], 'www', 'index.html')
+debug_flag = os.environ['DEBUG_FLAG']
 with open(path, 'r', encoding='utf-8') as f:
     html = f.read()
 if '__CAT_DEBUG__' not in html:
-    html = re.sub(r'(<script src=\"cordova\.js\"></script>)', r'\1\n    <script>window.__CAT_DEBUG__ = $DEBUG_FLAG;</script>', html)
+    html = re.sub(r'(<script src="cordova\.js"></script>)', r'\1\n    <script>window.__CAT_DEBUG__ = ' + debug_flag + ';</script>', html)
     with open(path, 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f'      Injected __CAT_DEBUG__=$DEBUG_FLAG')
+    print(f'      Injected __CAT_DEBUG__={debug_flag}')
 else:
     print('      __CAT_DEBUG__ already injected')
-"
+PYEOF
 
 # --- Step 5: Run cordova prepare + manual sync ---
 echo "[5/6] Running cordova prepare..."
